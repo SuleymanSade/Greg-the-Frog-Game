@@ -25,6 +25,7 @@ def get_data():
 
 
 def detect_flick():
+    global allHistory
     motion = []
     isExtX = False
     isExtY = False

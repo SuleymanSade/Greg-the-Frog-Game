@@ -8,6 +8,10 @@ SERIAL_RATE = 9600
 allHistory = []
 ser = serial.Serial(port = PORT, baudrate=SERIAL_RATE, timeout=1)
 
+def send_data(info: str):
+    # May need thereading
+    ser.write(info)
+
 def get_data():
     # Set: x-val, y-val, hearth rate
     clean = "-1, -1" # TODO: put the number of commmas for the default val

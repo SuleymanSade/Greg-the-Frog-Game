@@ -1,8 +1,99 @@
 import tkinter as tk
 import math
 import random
+
+import serial
 root = tk.Tk()
 root.title("Greg the Frog Game")
+
+
+PORT = "COM3"
+SERIAL_RATE = 9600
+
+JYSTCK_LOWER = 450
+JYSTCK_HIGHER = 550
+
+allHistory = []
+
+# ser = serial.Serial(PORT, baudrate= SERIAL_RATE, timeout=1)
+
+
+def get_data():
+    # Set: x-val, y-val, hearth rate
+    try:
+        # clean = "-1, -1" # TODO: put the number of commmas for the default val
+
+        # raw = ser.readline()
+
+        # if raw:
+        #     # raw = ser.read_all()
+        #     clean = raw.decode('utf-8', errors='ignore').strip()
+        #     # print(clean)
+        # data = clean.split(", ")
+
+        # for i in range(2):
+        #     if data[i] == '-1':
+        #         data[i] = None
+        #     elif data[i] == '':
+        #         data[i] = 0
+        #     else:
+        #         data[i] = int(data[i])
+        #     # print(data[i], end=", ")
+
+        # return data
+        if ser.in_waiting > 0:
+            raw = None
+            # DRAIN THE BUFFER: Read all lines until empty, keeping only the last one
+            while ser.in_waiting > 0:
+                raw = ser.readline() 
+
+            if raw:
+                clean = raw.decode('utf-8', errors='ignore').strip()
+                data = clean.split(", ")
+
+                # Ensure we actually have both X and Y before parsing
+                if len(data) >= 2:
+                    x = int(data[0]) if data[0] not in ['-1', ''] else None
+                    y = int(data[1]) if data[1] not in ['-1', ''] else None
+                    return [x, y]
+                    
+        return [None, None]
+    except Exception as e:
+        return [None, None]
+
+
+def detect_flick():
+    # if type(allHistory[-1][0]) is str or type(allHistory[-2][0]) is str or type(allHistory[-1][1]) is str or type(allHistory[-2][1]) is str:
+    #     return None
+    try:
+        motion = [0,0]
+        isExtX = False
+        isExtY = False
+        
+        if (len(allHistory) < 3):
+            return None
+
+        if int(allHistory[-1][0]) < 575 and int(allHistory[-1][0]) > 450:
+            if int(allHistory[-2][0]) > 575 or int(allHistory[-2][0]) < 450:
+                isExtX = True
+        if int(allHistory[-1][1]) < 575 and int(allHistory[-1][1]) > 450:
+            if int(allHistory[-2][1]) > 575 or int(allHistory[-2][1]) < 450:
+                isExtY = True
+
+        if isExtX or isExtY:
+            motion[0] = allHistory[-2][0]
+            motion[1] = allHistory[-2][1]
+            deg = math.atan2(int(motion[0])-512, int(motion[1])-512)
+        else:
+            return None
+        
+        return deg / (math.pi) * 180
+    except Exception as e:
+        return None
+    
+def send_data(info:str):
+    # Don't forget to add '\n' at the end
+    ser.write(info)
 
 class Asteroid:
     def __init__(self, canvas):
@@ -82,11 +173,17 @@ class GregGame:
 
         self.home_frame.pack()
         
+        
+        self.thruster_shape = [(-20, 10), (-20, -10), (-45, 0)]
+        self.thruster_id = self.canvas.create_polygon(
+            [0, 0, 0, 0, 0, 0], fill="white", state="hidden"
+        )
         self.frog = self.canvas.create_oval(50, 50, 100, 100, fill="green")
         self.frog_x = 400 #center
         self.frog_y = 400
         self.frog_vx = 0
         self.frog_vy = 0
+        self.is_accelerating = 0
         self.angle = 0
         
         self.spawnrates = {
@@ -109,6 +206,7 @@ class GregGame:
         }
         self.root.bind("<KeyPress>", self.on_key_press)
         self.root.bind("<KeyRelease>", self.on_key_release)
+    
     
     def on_key_press(self, event):
         key = event.keysym
@@ -140,6 +238,28 @@ class GregGame:
                 "Left": False,
                 "Right": False
             }
+            data = get_data()
+            # print(data)
+            if data[0] != "NULL":
+                allHistory.append(data)
+                if len(allHistory) > 5:
+                    allHistory.pop(0)
+            deg = detect_flick()
+            if deg is not None:
+                print(deg)
+            if deg is not None:
+                self.apply_acceleration(deg)
+            else:
+                #Stay at the same pos
+                pass
+        
+            if (self.is_accelerating > 0):
+                self.canvas.coords(self.thruster_id, self.thruster_points(self.angle))
+                fill = '#%02x%02x%02x' % (int(self.is_accelerating * (255 / 5)), int(self.is_accelerating * (255 / 5)), int(self.is_accelerating * (255 / 5)))
+                self.canvas.itemconfigure(self.thruster_id, state="normal", fill=fill)
+                self.is_accelerating -= 1
+            else:
+                self.canvas.itemconfigure(self.thruster_id, state="hidden")
             
             # apply physics
             self.frog_x+=self.frog_vx
@@ -203,13 +323,29 @@ class GregGame:
         self.margin = 0
         
         # testing -> apply acceleration 
-        self.apply_acceleration(45)  
+        # self.apply_acceleration(45)  
         
     def apply_acceleration(self, angle):
         
         acceleration = 2
-        self.frog_vx += acceleration * math.cos(math.radians(angle))
-        self.frog_vy += acceleration * math.sin(math.radians(angle))
+        self.angle = angle
+        self.frog_vx += acceleration * math.cos(math.radians(angle)) * -1
+        self.frog_vy += acceleration * math.sin(math.radians(angle)) 
+        self.is_accelerating = 5
+    
+    def thruster_points(self, angle):
+        points = []
+        # angle = (angle + 180) % 360
+        rad_angle = math.radians(angle)
+        for px, py in self.thruster_shape:
+            flicker_x = px
+            
+            rotated_x = flicker_x * math.cos(rad_angle) - py * math.sin(rad_angle)
+            rotated_y = flicker_x * math.sin(rad_angle) + py * math.cos(rad_angle)
+            
+            points.extend([self.frog_x + rotated_x, self.frog_y + rotated_y])
+        return points
+        
         
         
     def start_game(self):
