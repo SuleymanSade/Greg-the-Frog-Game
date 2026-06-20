@@ -185,6 +185,7 @@ class GregGame:
         self.start_time = time.time()
         
         self.root = root
+
         root.geometry("800x800")
         
         self.game_state = "home"
@@ -197,14 +198,16 @@ class GregGame:
         self.home_label = tk.Label(self.home_frame, text="Welcome to Greg the Frog Game!", font=("Arial", 24))
         self.start_button = tk.Button(self.home_frame, text="Start Game", command=self.start_game)
         self.home_label.pack()
+        self.home_label.place(relx=0.5, rely=.4, anchor=tk.CENTER)
         self.start_button.pack()
+        self.start_button.place(relx=.5, rely=.5, anchor=tk.CENTER)
         self.home_frame.pack()
 
         self.game_over_frame = tk.Frame(root)
         self.game_over_label = tk.Label(self.game_over_frame, text= "Game over, you have been hit by an astroid", font= ("Arial", 24))
         self.final_score_label1 = tk.Label(self.game_over_frame, font=("Arial", 24))
         self.final_score_label2 = tk.Label(self.game_over_frame, font=("Arial", 45))
-        self.restart_button = tk.Button(self.game_over_frame, text="Restart the Game", command=self.start_game)
+        self.restart_button = tk.Button(self.game_over_frame, text="Restart the Game", command=self.start_game, width=20, height=2, font=("Arial", 24))
         self.game_over_label.pack()
         self.game_over_label.place(relx=.5, rely=.4, anchor=tk.CENTER)
         self.game_over_frame.pack()
