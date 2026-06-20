@@ -2,6 +2,7 @@ import tkinter as tk
 import math
 import random
 
+import time
 import serial
 root = tk.Tk()
 root.title("Greg the Frog Game")
@@ -181,6 +182,8 @@ class StaticObject:
         
 class GregGame:
     def __init__(self, root):
+        self.start_time = time.time()
+        
         self.root = root
         root.geometry("800x800")
         
@@ -199,13 +202,14 @@ class GregGame:
 
         self.game_over_frame = tk.Frame(root)
         self.game_over_label = tk.Label(self.game_over_frame, text= "Game over, you have been hit by an astroid", font= ("Arial", 24))
-        self.final_score_label = tk.Label(self.game_over_frame, font=("Arial", 46))
+        self.final_score_label1 = tk.Label(self.game_over_frame, font=("Arial", 24))
+        self.final_score_label2 = tk.Label(self.game_over_frame, font=("Arial", 45))
         self.restart_button = tk.Button(self.game_over_frame, text="Restart the Game", command=self.start_game)
         self.game_over_label.pack()
-        self.game_over_label.place(relx=.5, rely=.5, anchor=tk.CENTER)
+        self.game_over_label.place(relx=.5, rely=.4, anchor=tk.CENTER)
         self.game_over_frame.pack()
         self.restart_button.pack()
-        self.restart_button.place(relx=.5, rely=.4, anchor=tk.CENTER)
+        self.restart_button.place(relx=.5, rely=.3, anchor=tk.CENTER)
         
 
         
@@ -268,9 +272,12 @@ class GregGame:
         self.home_frame.forget()
         self.game_over_frame.pack(expand=True, fill= "both")
         
-        self.final_score_label.config(text=f"Final Score: {self.stardust} stardust x {0} time")
-        self.final_score_label.pack()
-        self.final_score_label.place(relx=.5, rely=.6, anchor=tk.CENTER)
+        self.final_score_label1.config(text=f"Final Score: {self.stardust} stardust x {round(time.time()-self.start_time, 2)} sec")
+        self.final_score_label1.pack()
+        self.final_score_label1.place(relx=.5, rely=.5, anchor=tk.CENTER)
+        self.final_score_label2.config(text=f"= {round(self.stardust * (time.time()-self.start_time), 2)} pts")
+        self.final_score_label2.pack()
+        self.final_score_label2.place(relx=.5, rely=.6, anchor=tk.CENTER)
         # self.final_score_label.pack(side="top")
 
         for item in self.objects:
@@ -278,6 +285,8 @@ class GregGame:
 
         self.objects = []
         self.stardust = 0
+
+        self.start_time = time.time()
 
     def game_loop(self):
         
