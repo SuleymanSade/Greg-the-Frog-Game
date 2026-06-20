@@ -96,9 +96,9 @@ def send_data(info:str):
     ser.write(info)
 
 class Asteroid:
-    def __init__(self, canvas):
+    def __init__(self, canvas, size):
         self.canvas = canvas
-        self.radius = random.randint(15, 25)
+        self.radius = random.randint(size-5, size+5)
         self.angle = 0
         self.spin_speed = random.uniform(-0.1, 0.1)
         
@@ -221,14 +221,15 @@ class GregGame:
         self.angle = 0
         self.border = self.canvas.create_rectangle(0, 0, 800, 800, outline="#212121", width=100)
         self.sizes = {
-            "stardust": 10,
+            "stardust": 30,
+            "asteroid": 20
         }
         
         
 
         
         self.spawnrates = {
-            "stardust": 0.01,
+            "stardust": 0.03,
             "asteroid": 0.01
         }
         
@@ -279,11 +280,15 @@ class GregGame:
         
         if (self.game_state == "game"):
             self.margin += 0.06
-            self.sizes["stardust"] -= 0.0001
+            self.sizes["stardust"] -= 0.009 # goes down by 0.540 every second
+            self.sizes["asteroid"] += 0.004 # goes up by 0.06 every second
             if (self.sizes["stardust"] < 1):
                 self.sizes["stardust"] = 1
+            if (self.sizes["asteroid"] > 50):
+                self.sizes["asteroid"] = 50
             self.canvas.itemconfigure(self.border, width=self.margin)
             self.spawnrates["asteroid"] += 0.00002
+            self.spawnrates["stardust"] += 0.00001
             self.canvas.move(self.frog, 0.5, 0.5);
             
             
@@ -352,9 +357,9 @@ class GregGame:
             for probs in self.spawnrates:
                 if random.random() < self.spawnrates[probs]:
                     if probs == "asteroid":
-                        self.objects.append(Asteroid(self.canvas))
+                        self.objects.append(Asteroid(self.canvas, int(self.sizes["asteroid"])))
                     elif probs == "stardust":
-                        self.objects.append(StaticObject(self.canvas, random.randint(200, 600), random.randint(200, 600), self.sizes["stardust"], "stardust"))
+                        self.objects.append(StaticObject(self.canvas, random.randint(200, 600), random.randint(200, 600), int(self.sizes["stardust"]), "stardust"))
                         
             
             to_delete = []
@@ -410,7 +415,8 @@ class GregGame:
         self.stardust = 0
         self.margin = 0
         self.sizes = {
-            "stardust": 10,
+            "stardust": 30,
+            "asteroid": 20
         }
         
         # testing -> apply acceleration 
