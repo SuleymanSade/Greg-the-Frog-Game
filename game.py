@@ -7,7 +7,7 @@ root = tk.Tk()
 root.title("Greg the Frog Game")
 
 
-PORT = "COM3"
+PORT = "COM7"
 SERIAL_RATE = 9600
 
 JYSTCK_LOWER = 450
@@ -15,7 +15,7 @@ JYSTCK_HIGHER = 550
 
 allHistory = []
 
-ser = serial.Serial(PORT, baudrate= SERIAL_RATE, timeout=1)
+# ser = serial.Serial(PORT, baudrate= SERIAL_RATE, timeout=1)
 
 
 def get_data():
@@ -199,11 +199,13 @@ class GregGame:
 
         self.game_over_frame = tk.Frame(root)
         self.game_over_label = tk.Label(self.game_over_frame, text= "Game over, you have been hit by an astroid", font= ("Arial", 24))
-        self.final_score_label = tk.Label(self.game_over_frame)
+        self.final_score_label = tk.Label(self.game_over_frame, font=("Arial", 46))
         self.restart_button = tk.Button(self.game_over_frame, text="Restart the Game", command=self.start_game)
-        self.game_over_label.pack(side = "bottom", pady = 600, fill= "x")
+        self.game_over_label.pack()
+        self.game_over_label.place(relx=.5, rely=.5, anchor=tk.CENTER)
         self.game_over_frame.pack()
-        self.restart_button.pack(side = "bottom", pady=400)
+        self.restart_button.pack()
+        self.restart_button.place(relx=.5, rely=.4, anchor=tk.CENTER)
         
 
         
@@ -266,8 +268,10 @@ class GregGame:
         self.home_frame.forget()
         self.game_over_frame.pack(expand=True, fill= "both")
         
-        self.final_score_label.config(text=f"Final Score: {self.stardust}")
-        self.final_score_label.pack(side="bottom")
+        self.final_score_label.config(text=f"Final Score: {self.stardust} stardust x {0} time")
+        self.final_score_label.pack()
+        self.final_score_label.place(relx=.5, rely=.6, anchor=tk.CENTER)
+        # self.final_score_label.pack(side="top")
 
         for item in self.objects:
             item.destroy()
