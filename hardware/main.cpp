@@ -1,4 +1,3 @@
-#include <vector>
 # define PUSH 7
 # define vrX 0
 # define vrY 1
@@ -7,14 +6,14 @@ int yval;
 
 const int buzzer_pin = 11;
 
-vector<int> allX = {512, 512};
-vector<int> allY = {512, 512};
+int allX[] = {512, 512};
+int allY[] = {512, 512};
 
 void setup() {
     Serial.begin(9600);
     pinMode(vrX, INPUT);
     pinMode(vrY, INPUT);
-    pinMode(buzzer_pin, OUTPUT)
+    pinMode(buzzer_pin, OUTPUT);
 }
 
 void loop() {
@@ -44,7 +43,7 @@ void loop() {
     }
 
     if(xExt || yExt){
-        // Sound the buzzer here
+        tone (buzzer_pin, 800, 50);
     }
     
 }

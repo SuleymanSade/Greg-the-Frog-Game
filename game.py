@@ -15,7 +15,7 @@ JYSTCK_HIGHER = 550
 
 allHistory = []
 
-# ser = serial.Serial(PORT, baudrate= SERIAL_RATE, timeout=1)
+ser = serial.Serial(PORT, baudrate= SERIAL_RATE, timeout=1)
 
 
 def get_data():
@@ -153,6 +153,31 @@ class Asteroid:
     def destroy(self):
         self.canvas.delete(self.id)
         
+    def check_collision(self, frog_x, frog_y):
+        dist = math.sqrt((self.x - frog_x)**2 + (self.y - frog_y)**2)
+        return dist < self.radius + 25
+        
+class StaticObject:
+    def __init__(self, canvas, x, y, size, object_type):
+        self.canvas = canvas
+        self.x = x
+        self.y = y
+        self.size = size
+        self.type = object_type
+        self.id = self.canvas.create_oval(self.x-self.size, self.y-self.size, self.x+self.size, self.y+self.size, fill="yellow")
+        self.time_left = 100 # 5 seconds at 60 fps
+    
+    def destroy(self):
+        self.canvas.delete(self.id)
+    
+    def update(self):
+        pass
+    
+    def check_collision(self, frog_x, frog_y):
+        dist = math.sqrt((self.x - frog_x)**2 + (self.y - frog_y)**2)
+        return dist < self.size + 25
+        
+        
         
 class GregGame:
     def __init__(self, root):
@@ -170,8 +195,17 @@ class GregGame:
         self.start_button = tk.Button(self.home_frame, text="Start Game", command=self.start_game)
         self.home_label.pack()
         self.start_button.pack()
-
         self.home_frame.pack()
+
+        self.game_over_frame = tk.Frame(root)
+        self.game_over_label = tk.Label(self.game_over_frame, text= "Game over, you have been hit by an astroid", font= ("Arial", 24))
+        self.final_score_label = tk.Label(self.game_over_frame)
+        self.restart_button = tk.Button(self.game_over_frame, text="Restart the Game", command=self.start_game)
+        self.game_over_label.pack(side = "bottom", pady = 600, fill= "x")
+        self.game_over_frame.pack()
+        self.restart_button.pack(side = "bottom", pady=400)
+        
+
         
         
         self.thruster_shape = [(-20, 10), (-20, -10), (-45, 0)]
@@ -185,6 +219,13 @@ class GregGame:
         self.frog_vy = 0
         self.is_accelerating = 0
         self.angle = 0
+        self.border = self.canvas.create_rectangle(0, 0, 800, 800, outline="#212121", width=100)
+        self.sizes = {
+            "stardust": 10,
+        }
+        
+        
+
         
         self.spawnrates = {
             "stardust": 0.01,
@@ -218,9 +259,31 @@ class GregGame:
         if key in self.keys:
             self.keys[key] = False
         
+    def show_game_over(self):
+        self.game_state = "game over"
+
+        self.canvas_frame.forget()
+        self.home_frame.forget()
+        self.game_over_frame.pack(expand=True, fill= "both")
+        
+        self.final_score_label.config(text=f"Final Score: {self.stardust}")
+        self.final_score_label.pack(side="bottom")
+
+        for item in self.objects:
+            item.destroy()
+
+        self.objects = []
+        self.stardust = 0
+
     def game_loop(self):
         
         if (self.game_state == "game"):
+            self.margin += 0.06
+            self.sizes["stardust"] -= 0.0001
+            if (self.sizes["stardust"] < 1):
+                self.sizes["stardust"] = 1
+            self.canvas.itemconfigure(self.border, width=self.margin)
+            self.spawnrates["asteroid"] += 0.00002
             self.canvas.move(self.frog, 0.5, 0.5);
             
             
@@ -290,16 +353,39 @@ class GregGame:
                 if random.random() < self.spawnrates[probs]:
                     if probs == "asteroid":
                         self.objects.append(Asteroid(self.canvas))
+                    elif probs == "stardust":
+                        self.objects.append(StaticObject(self.canvas, random.randint(200, 600), random.randint(200, 600), self.sizes["stardust"], "stardust"))
                         
             
             to_delete = []
             for item in self.objects:
                 still_moving = item.update()
                 if still_moving is False:
-                    to_delete.append(item)                    
+                    to_delete.append(item)         
+                if isinstance(item, StaticObject):
+                    self.canvas.itemconfigure(item.id, fill=self.grayscale((255, 255, 0), (100 - (item.time_left / 100) * 100)))
+                    if item.check_collision(self.frog_x, self.frog_y):
+                        self.stardust += 1
+                        print("Stardust collected")
+                        to_delete.append(item)    
+                        
+                    else:
+                        item.time_left -= 1
+                        if item.time_left <= 0:
+                            to_delete.append(item)
+                elif isinstance(item, Asteroid):
+                    if item.check_collision(self.frog_x, self.frog_y):
+                        print("Hit by asteroid! Game Over!")
+                        
+                        self.show_game_over()
+                        # self.show_home()
 
             for item in to_delete:
-                self.objects.remove(item)
+                item.destroy()
+                if isinstance(item, StaticObject) and item in self.objects:
+                    self.objects.remove(item)
+                
+            self.canvas.tag_raise(self.border)
                 
                 
                             
@@ -311,16 +397,21 @@ class GregGame:
         self.game_state = "home"
         self.home_frame.pack(expand=True, fill="both")
         self.canvas_frame.pack_forget()
+        self.game_over_frame.pack_forget()
         
     def show_game(self):
         self.game_state = "game"
         self.home_frame.pack_forget()
         self.canvas_frame.pack(expand=True, fill="both")
+        self.game_over_frame.pack_forget()
         
         # set up game preset data and stuff
         self.objects = []
         self.stardust = 0
         self.margin = 0
+        self.sizes = {
+            "stardust": 10,
+        }
         
         # testing -> apply acceleration 
         # self.apply_acceleration(45)  
@@ -343,6 +434,7 @@ class GregGame:
             rotated_x = flicker_x * math.cos(rad_angle) - py * math.sin(rad_angle)
             rotated_y = flicker_x * math.sin(rad_angle) + py * math.cos(rad_angle)
             
+            rotated_x *= -1
             points.extend([self.frog_x + rotated_x, self.frog_y + rotated_y])
         return points
         
@@ -351,7 +443,21 @@ class GregGame:
     def start_game(self):
         self.show_game()
         
+    def grayscale(self, rgb_tuple, percent_black):
+
+        r, g, b = rgb_tuple
+        remaining_factor = 1.0 - (percent_black / 100.0)
         
+        final_r = int(r * remaining_factor)
+        final_g = int(g * remaining_factor)
+        final_b = int(b * remaining_factor)
+        
+        final_r = max(0, min(255, final_r))
+        final_g = max(0, min(255, final_g))
+        final_b = max(0, min(255, final_b))
+        
+        return '#%02x%02x%02x' % (final_r, final_g, final_b)
+            
 
         
 
