@@ -1,5 +1,6 @@
 import tkinter as tk
 import math
+from PIL import Image, ImageTk, ImageColor
 import random
 
 import time
@@ -8,7 +9,7 @@ root = tk.Tk()
 root.title("Greg the Frog Game")
 
 
-PORT = "COM7"
+PORT = "COM3"
 SERIAL_RATE = 9600
 
 JYSTCK_LOWER = 450
@@ -16,7 +17,15 @@ JYSTCK_HIGHER = 550
 
 allHistory = []
 
-ser = serial.Serial(PORT, baudrate=SERIAL_RATE, timeout=1)
+# ser = serial.Serial(PORT, baudrate=SERIAL_RATE, timeout=1)
+
+
+def change_opacity(image_path, opacity=1.0, size=30):
+    img = Image.open(image_path).resize((size, size)).convert("RGBA")
+    r, g, b, alpha = img.split()
+    alpha = alpha.point(lambda p: int(p * max(0.0, min(opacity, 1.0))))
+    img_with_opacity = Image.merge("RGBA", (r, g, b, alpha))
+    return ImageTk.PhotoImage(img_with_opacity)
 
 
 def get_data():
@@ -163,14 +172,22 @@ class Asteroid:
 
 
 class StaticObject:
-    def __init__(self, canvas, x, y, size, object_type):
+    def __init__(self, canvas, x, y, size, object_type, image=None):
         self.canvas = canvas
         self.x = x
         self.y = y
         self.size = size
         self.type = object_type
-        self.id = self.canvas.create_oval(
-            self.x-self.size, self.y-self.size, self.x+self.size, self.y+self.size, fill="yellow")
+        self.image = image
+        if self.image:
+            img = Image.open("fuel.png").resize(
+                (self.size*2, self.size*2), Image.Resampling.LANCZOS)
+            self.image = ImageTk.PhotoImage(img)
+            self.id = self.canvas.create_image(
+                self.x, self.y, image=self.image)
+        else:
+            self.id = self.canvas.create_oval(
+                self.x-self.size, self.y-self.size, self.x+self.size, self.y+self.size, fill="yellow")
         self.time_left = 100  # 5 seconds at 60 fps
 
     def destroy(self):
@@ -187,7 +204,7 @@ class StaticObject:
 class GregGame:
     def __init__(self, root):
         self.start_time = time.time()
-        
+
         self.root = root
 
         root.geometry("800x800")
@@ -211,27 +228,32 @@ class GregGame:
         self.home_frame.pack()
 
         self.game_over_frame = tk.Frame(root)
-        self.game_over_label = tk.Label(self.game_over_frame, text= "Game over, you have been hit by an astroid", font= ("Arial", 24))
-        self.final_score_label1 = tk.Label(self.game_over_frame, font=("Arial", 24))
-        self.final_score_label2 = tk.Label(self.game_over_frame, font=("Arial", 45))
-        self.restart_button = tk.Button(self.game_over_frame, text="Restart the Game", command=self.start_game, width=20, height=2, font=("Arial", 24))
+        self.game_over_label = tk.Label(
+            self.game_over_frame, text="Mission Failed! You've been hit by an asteroid", font=("Arial", 24))
+        self.final_score_label1 = tk.Label(
+            self.game_over_frame, font=("Arial", 24))
+        self.final_score_label2 = tk.Label(
+            self.game_over_frame, font=("Arial", 45, "bold"))
+        self.restart_button = tk.Button(self.game_over_frame, text="Restart the Game",
+                                        command=self.start_game, width=20, height=2, font=("Arial", 24))
         self.game_over_label.pack()
         self.game_over_label.place(relx=.5, rely=.4, anchor=tk.CENTER)
         self.game_over_frame.pack()
         self.restart_button.pack()
         self.restart_button.place(relx=.5, rely=.3, anchor=tk.CENTER)
-        
 
-        
-        
         self.thruster_shape = [(-20, 10), (-20, -10), (-45, 0)]
         self.thruster_shape2 = [(-10, 15), (-10, -15), (-45, 0)]  # bigger
 
         self.thruster_id = self.canvas.create_polygon(
             [0, 0, 0, 0, 0, 0], fill="white", state="hidden"
         )
-        self.frog_image = tk.PhotoImage(file="ship.png")
+        frog_image = Image.open("ship.png").resize(
+            (50, 50), Image.Resampling.LANCZOS)
+        frog_image = ImageTk.PhotoImage(frog_image)
+        self.frog_image = frog_image
         self.frog = self.canvas.create_image(400, 400, image=self.frog_image)
+        self.fuel_image = tk.PhotoImage(file="fuel.png")
         self.frog_x = 400  # center
         self.frog_y = 400
         self.frog_vx = 0
@@ -242,7 +264,8 @@ class GregGame:
             0, 0, 800, 800, outline="#212121", width=100)
         self.sizes = {
             "stardust": 30,
-            "asteroid": 20
+            "asteroid": 20,
+            "fuel": 15
         }
         self.fuel = 100
         self.shiftdown = False
@@ -255,7 +278,8 @@ class GregGame:
 
         self.spawnrates = {
             "stardust": 0.03,
-            "asteroid": 0.01
+            "asteroid": 0.01,
+            "fuel": 0.005
         }
 
         self.frame_delay = int(1000 / 60)  # 60 fps
@@ -291,12 +315,14 @@ class GregGame:
 
         self.canvas_frame.forget()
         self.home_frame.forget()
-        self.game_over_frame.pack(expand=True, fill= "both")
-        
-        self.final_score_label1.config(text=f"Final Score: {self.stardust} stardust x {round(time.time()-self.start_time, 2)} sec")
+        self.game_over_frame.pack(expand=True, fill="both")
+
+        self.final_score_label1.config(
+            text=f"Final Score: {self.stardust} stardust x {round(time.time()-self.start_time, 2)} sec")
         self.final_score_label1.pack()
         self.final_score_label1.place(relx=.5, rely=.5, anchor=tk.CENTER)
-        self.final_score_label2.config(text=f"= {round(self.stardust * (time.time()-self.start_time), 2)} pts")
+        self.final_score_label2.config(
+            text=f"= {round(self.stardust * (time.time()-self.start_time))} pts")
         self.final_score_label2.pack()
         self.final_score_label2.place(relx=.5, rely=.6, anchor=tk.CENTER)
         # self.final_score_label.pack(side="top")
@@ -329,9 +355,9 @@ class GregGame:
             elif (self.keys["Down"]):
                 self.apply_acceleration(90)
             elif (self.keys["Left"]):
-                self.apply_acceleration(180)
-            elif (self.keys["Right"]):
                 self.apply_acceleration(0)
+            elif (self.keys["Right"]):
+                self.apply_acceleration(180)
             self.keys = {
                 "Up": False,
                 "Down": False,
@@ -363,7 +389,6 @@ class GregGame:
                 if (self.a_type == "boost"):
                     fill = '#%02x%02x%02x' % (int(self.is_accelerating * (140 / 8)), int(
                         self.is_accelerating * (159 / 8)), int(self.is_accelerating * (255 / 8)))
-
                 self.canvas.itemconfigure(
                     self.thruster_id, state="normal", fill=fill)
                 self.is_accelerating -= 1
@@ -406,6 +431,11 @@ class GregGame:
                     elif probs == "stardust":
                         self.objects.append(StaticObject(self.canvas, random.randint(
                             200, 600), random.randint(200, 600), int(self.sizes["stardust"]), "stardust"))
+                    elif probs == "fuel":
+                        fuel = StaticObject(self.canvas, random.randint(
+                            200, 600), random.randint(200, 600), int(self.sizes["fuel"]), "fuel", self.fuel_image)
+                        self.objects.append(fuel)
+                        print("fuel spawned at ", fuel.x, fuel.y)
 
             to_delete = []
             for item in self.objects:
@@ -413,14 +443,27 @@ class GregGame:
                 if still_moving is False:
                     to_delete.append(item)
                 if isinstance(item, StaticObject):
-                    self.canvas.itemconfigure(item.id, fill=self.grayscale(
-                        (255, 255, 0), (100 - (item.time_left / 100) * 100)))
+                    if (item.image is None):
+                        self.canvas.itemconfigure(item.id, fill=self.grayscale(
+                            (255, 255, 0), (100 - (item.time_left / 100) * 100)))
+                    else:
+                        item.image = change_opacity(
+                            "fuel.png", item.time_left / 100, item.size * 2)
+                        self.canvas.itemconfigure(item.id, image=item.image)
                     if item.check_collision(self.frog_x, self.frog_y):
                         self.stardust += 1
                         to_delete.append(item)
-                        label = self.canvas.create_text(
-                            self.frog_x+(self.sizes["stardust"]/2), self.frog_y+(self.sizes["stardust"]/2), text="+1", fill="yellow", font=("Arial", 16, "bold"))
-                        self.temp_text.append([label, 30])  
+                        if (item.type == "stardust"):
+                            label = self.canvas.create_text(
+                                self.frog_x+(self.sizes["stardust"]/2), self.frog_y+(self.sizes["stardust"]/2), text="+1", fill="yellow", font=("Arial", 16, "bold"))
+                            self.temp_text.append([label, 30, "#FFFF00"])
+
+                        elif (item.type == "fuel"):
+                            fuel_change = random.randint(15, 30)
+                            self.fuel += fuel_change
+                            label = self.canvas.create_text(
+                                self.frog_x+(self.sizes["fuel"]/2), self.frog_y+(self.sizes["fuel"]/2), text=f"+{fuel_change}", fill="#19c809", font=("Arial", 16, "bold"))
+                            self.temp_text.append([label, 30, "#19c809"])
 
                     else:
                         item.time_left -= 1
@@ -430,16 +473,19 @@ class GregGame:
                     if item.check_collision(self.frog_x, self.frog_y):
                         print("Hit by asteroid! Game Over!")
                         self.particles = []
-                        colors = ["#ff0000", "#ff4000", "#ff8000", "#ffbf00", "#ffff00"]
+                        colors = ["#ff0000", "#ff4000",
+                                  "#ff8000", "#ffbf00", "#ffff00"]
                         for i in range(120):
                             size = random.uniform(1, 3)
                             color = random.choice(colors)
-                            particle = self.canvas.create_oval(self.frog_x-size, self.frog_y-size, self.frog_x+size, self.frog_y+size, fill=color, outline="", state="hidden")
+                            particle = self.canvas.create_oval(
+                                self.frog_x-size, self.frog_y-size, self.frog_x+size, self.frog_y+size, fill=color, outline="", state="hidden")
                             angle = random.uniform(0, math.pi * 2)
                             speed = random.uniform(0.25, 0.90)
                             vx = math.cos(angle) * speed
                             vy = math.sin(angle) * speed
-                            self.particles.append({"id": particle, "vx": vx, "vy": vy, "life": 80, "delay": random.randint(0, 3), "color": color})
+                            self.particles.append(
+                                {"id": particle, "vx": vx, "vy": vy, "life": 80, "delay": random.randint(0, 3), "color": color})
                         self.game_state = "exploding"
                         self.explode()
                         # self.show_home()
@@ -452,7 +498,9 @@ class GregGame:
             self.canvas.tag_raise(self.border)
             for i in range(len(self.temp_text) - 1, -1, -1):
                 self.temp_text[i][1] -= 1
-                self.canvas.itemconfigure(self.temp_text[i][0], fill=self.grayscale((255, 255, 0), (100 - (self.temp_text[i][1] / 30) * 100)))
+                rgb = ImageColor.getcolor(self.temp_text[i][2], "RGB")
+                self.canvas.itemconfigure(self.temp_text[i][0], fill=self.grayscale(
+                    rgb, (100 - (self.temp_text[i][1] / 30) * 100)))
                 if (self.temp_text[i][1] < 0):
                     self.canvas.delete(self.temp_text[i][0])
                     self.temp_text.pop(i)
@@ -477,9 +525,22 @@ class GregGame:
         self.margin = 0
         self.sizes = {
             "stardust": 30,
-            "asteroid": 20
+            "asteroid": 20,
+            "fuel": 20
         }
         self.particles = []
+        self.frog_x = 400
+        self.frog_y = 400
+        self.frog_vx = 0
+        self.frog_vy = 0
+        self.is_accelerating = 0
+        self.angle = 0
+        self.start_time = time.time()
+        self.spawnrates = {
+            "stardust": 0.03,
+            "asteroid": 0.01,
+            "fuel": 0.005
+        }
 
         # testing -> apply acceleration
         # self.apply_acceleration(45)
@@ -534,15 +595,17 @@ class GregGame:
         final_b = max(0, min(255, final_b))
 
         return '#%02x%02x%02x' % (final_r, final_g, final_b)
-    
+
     def explode(self):
         if (len([p for p in self.particles if p["life"] > 60]) == 0):
-            for p in self.particles:
-                self.canvas.delete(p["id"])
+            for i in range(len(self.particles)):
+                self.canvas.itemconfigure(
+                    self.particles[i]["id"], state="hidden")
+                self.canvas.delete(self.particles[i]["id"])
+            self.particles = []
+
             self.show_game_over()
         else:
-            
-            self.particles = [p for p in self.particles if p["life"] > 60]
 
             for p in self.particles:
                 if p["delay"] > 0:
@@ -550,13 +613,15 @@ class GregGame:
                     continue
                 self.canvas.move(p["id"], p["vx"], p["vy"])
                 p["life"] -= 1
-                self.canvas.scale(p["id"], self.frog_x, self.frog_y, 1.09, 1.09)
-                self.canvas.itemconfigure(p["id"], fill=self.grayscale((int(p["color"][1:3], 16), int(p["color"][3:5], 16), int(p["color"][5:7], 16)), (100 - (p["life"] / 80) * 100)), state="normal")
+                self.canvas.scale(p["id"], self.frog_x,
+                                  self.frog_y, 1.09, 1.09)
+                self.canvas.itemconfigure(p["id"], fill=self.grayscale((int(p["color"][1:3], 16), int(
+                    p["color"][3:5], 16), int(p["color"][5:7], 16)), (100 - (p["life"] / 80) * 100)), state="normal")
+
             if (len([p for p in self.particles if p["life"] > 60]) > 0):
-                self.root.after(1000 // 60, self.explode) 
+                self.root.after(1000 // 60, self.explode)
             else:
                 self.root.after(2500, self.explode)
-            
 
 
 game = GregGame(root)
