@@ -44,6 +44,12 @@ void loop() {
 
     if(xExt || yExt){
         tone (buzzer_pin, 800, 50);
+        digitalWrite(8, HIGH);
+        digitalWrite(12, LOW);
+        delay(50);
     }
+
+    digitalWrite(8, LOW);
+    digitalWrite(12, HIGHT);
     
 }
