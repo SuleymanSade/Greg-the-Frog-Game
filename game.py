@@ -414,7 +414,7 @@ class GregGame:
                         print("Hit by asteroid! Game Over!")
                         self.particles = []
                         colors = ["#ff0000", "#ff4000", "#ff8000", "#ffbf00", "#ffff00"]
-                        for i in range(80):
+                        for i in range(120):
                             size = random.uniform(1, 3)
                             color = random.choice(colors)
                             particle = self.canvas.create_oval(self.frog_x-size, self.frog_y-size, self.frog_x+size, self.frog_y+size, fill=color, outline="", state="hidden")
