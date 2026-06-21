@@ -59,6 +59,7 @@ void setup() {
 }
 
 void loop() {
+    // 1. Read joysticks FIRST so controls stay highly responsive
     xval = analogRead(vrX);
     yval = analogRead(vrY);
     Serial.print(xval);
@@ -71,13 +72,11 @@ void loop() {
     allY[1] = yval;
 
     bool xExt = false, yExt = false;
-
     if(allX[0] > 575 || allX[0] < 450){
         if(allX[1] < 575 && allX[1] > 450){
             xExt = true;
         }
     }
-
     if(allY[0] > 575 || allY[0] < 450){
         if(allY[1] < 575 && allY[1] > 450){
             yExt = true;
@@ -94,20 +93,23 @@ void loop() {
     digitalWrite(8, LOW);
     digitalWrite(12, HIGH);
 
+    // 2. Process serial data only when a full line arrives
     if(Serial.available() > 0){
-        String info = Serial.readStringUntil("\n");
+        String info = Serial.readStringUntil('\n');
         info.trim();
 
-        display.clearDisplay();
-        create_display_box();
+        if (info.length() > 0) {
+            int fuelVal = info.toInt();
+            int barWidth = map(fuelVal, 0, 200, 0, 100); 
+            barWidth = constrain(barWidth, 0, 100);
 
-        // for(int i=12; i<12+info.toInt()/2; ++i){
-        //     for(int j=7; j<57; ++j){
-        display.fillRect(12, 7, info.toInt()/2, 50, SSD1306_WHITE);
-        //     }
-        // }
+            display.clearDisplay();
+            create_display_box();
 
-        display.display();
+            if (barWidth > 0) {
+                display.fillRect(112-barWidth, 7, barWidth, 50, SSD1306_WHITE);
+            }
+            display.display();
+        }
     }
-    
 }
