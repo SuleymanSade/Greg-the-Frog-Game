@@ -348,14 +348,38 @@ class GregGame:
         self.guide_frame = tk.Frame(root, bg="black")
         self.guide_header = tk.Label(self.guide_frame, text="Space Greg - Game Guide", font=("Arial", 30, "bold"), bg="black", fg="white")
         self.guide_header.pack()
-        self.guide_header.place(relx=.5, rely=.1, anchor=tk.CENTER)
+        self.guide_header.place(relx=.5, rely=.06, anchor=tk.CENTER)
         self.guide_descrpition = tk.Label(self.guide_frame, text="Welcome to Space Greg! You're playing as Greg, a brave frog who is collecting stardust to save the solar system and the rest of the frog species! But this mission is not without its challenges; there are multiple obstacles you'll have to face, all while managing your fuel. ", font=("Arial", 16), bg="black", fg="white", wraplength=700, justify="center")
         self.guide_descrpition.pack()
-        self.guide_descrpition.place(relx=.5, rely=.2, anchor=tk.CENTER)
+        self.guide_descrpition.place(relx=.5, rely=.16, anchor=tk.CENTER)
         
         self.guide_controls = tk.Label(self.guide_frame, text="Controls: \n- Joystick to move Greg (using flicking in direction of intended motion)\n- Shift key to boost speed (uses more fuel)", font=("Arial", 16), bg="black", fg="white", justify="left")
         self.guide_controls.pack()
-        self.guide_controls.place(relx=.5, rely=.32, anchor=tk.CENTER) 
+        self.guide_controls.place(relx=.5, rely=.28, anchor=tk.CENTER) 
+        self.guide_return = tk.Button(self.guide_frame, text="Return Home", command=self.show_home, width=17, height=2, font=("Arial", 13), bg="black", fg="white")
+        self.guide_return.pack()
+        self.guide_return.place(relx=.5, rely=.93, anchor=tk.CENTER)
+        # description of each object
+        texts = ["This is Greg, in his spaceship. Use the joystick to move him around.", "Stardust is what you need to collect to win the game. The more you have, the better your score!", "Fuel is required to move around. Collect fuel objects to replenish your fuel, fuel runs out quickly!", "Asteroids are obstacles you must avoid. You'll explode if you collide with them!", "Be especially careful of asteroid clusters. They are fast moving groups of asteroids that are hard to navigate through!", "Comets are dangerously fast objects that leave a trail of valuable stardust, but be careful as they can be hard to avoid!", "Wormholes are mysterious portals that can transport you to their pair, but be cautious where you go!"] 
+        for img in ["ship.png", "stardust.png", "fuel.png", "asteroid.png", "cluster.png","comet.png", "wormhole.png"]:
+            loaded_img = Image.open(img).resize((50, 50), Image.Resampling.LANCZOS)
+            tk_img = ImageTk.PhotoImage(loaded_img)
+            label = tk.Label(self.guide_frame, image=tk_img, bg="black")
+            label.image = tk_img
+            label.pack()
+            label.place(relx=.17, rely=.38 + 0.08 * ["ship.png", "stardust.png", "fuel.png", "asteroid.png", "cluster.png","comet.png", "wormhole.png"].index(img), anchor=tk.CENTER)  
+            text = tk.Label(self.guide_frame, text=texts[["ship.png", "stardust.png", "fuel.png", "asteroid.png", "cluster.png","comet.png", "wormhole.png"].index(img)], font=("Arial", 13), bg="black", fg="white", justify="left", wraplength=500)
+            text.pack()
+            text.place(relx=.57, rely=.38 + 0.08 * ["ship.png", "stardust.png", "fuel.png", "asteroid.png", "cluster.png","comet.png", "wormhole.png"].index(img), anchor=tk.CENTER)
+        # self.guide_img1 = Image.open("ship.png").resize((50, 50), Image.Resampling.LANCZOS)
+        # self.guide_img1.pack()
+        # self.guide_img1.place(relx=.25, rely=.45, anchor=tk.CENTER)
+        # self.guide_img2 = Image.open("stardust.png").resize((50, 50), Image.Resampling.LANCZOS)
+        # self.guide_img2.pack()
+        # self.guide_img2.place(relx=.25, rely=.50, anchor=tk.CENTER)
+        # self.guide_img3 = Image.open("fuel.png").resize((50, 50), Image.Resampling.LANCZOS)
+        # self.guide_img3.pack()
+        # self.guide_img3.place(relx=.25, rely=.55, anchor=tk.CENTER)
 
         self.thruster_shape = [(-20, 10), (-20, -10), (-45, 0)]
         self.thruster_shape2 = [(-10, 15), (-10, -15), (-45, 0)]  # bigger
