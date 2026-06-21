@@ -28,7 +28,7 @@ def change_opacity(image_path, opacity=1.0, size=30):
     return ImageTk.PhotoImage(img_with_opacity)
 
 def send_data(info: str):
-    ser.write(info)
+    ser.write(info.encode("utf-8"))
 
 def get_data():
     # Set: x-val, y-val, hearth rate
@@ -102,11 +102,6 @@ def detect_flick():
         return deg / (math.pi) * 180
     except Exception as e:
         return None
-
-
-def send_data(info: str):
-    # Don't forget to add '\n' at the end
-    ser.write(info)
 
 
 class Asteroid:
@@ -246,6 +241,8 @@ class GregGame:
 
         self.thruster_shape = [(-20, 10), (-20, -10), (-45, 0)]
         self.thruster_shape2 = [(-10, 15), (-10, -15), (-45, 0)]  # bigger
+
+        self.last_sent_fuel = -1
 
         self.thruster_id = self.canvas.create_polygon(
             [0, 0, 0, 0, 0, 0], fill="white", state="hidden"
@@ -540,10 +537,14 @@ class GregGame:
             self.canvas.itemconfigure(self.time_label, text=f"{minutes}m {seconds}s")
             self.canvas.tag_raise(self.time_label)
 
-        try:
-            send_data(self.fuel + "\n")
-        except:
-            pass
+        if self.game_state == "game":
+            if int(self.fuel) != self.last_sent_fuel: 
+                try:
+                    fuel_string = str(int(self.fuel)) + "\n"
+                    send_data(fuel_string)
+                    self.last_sent_fuel = int(self.fuel)
+                except Exception as e:
+                        print(f"Serial write error: {e}")
 
         self.root.after(self.frame_delay, self.game_loop)
 
