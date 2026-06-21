@@ -269,7 +269,7 @@ class GregGame:
             "asteroid": 20,
             "fuel": 15
         }
-        self.fuel = 100
+        self.fuel = 40
         self.shiftdown = False
         self.root.bind("<KeyPress-Shift_L>", lambda e: self.set_shift(True))
         self.root.bind("<KeyRelease-Shift_L>", lambda e: self.set_shift(False))
@@ -277,6 +277,14 @@ class GregGame:
         self.root.bind("<KeyRelease-Shift_R>", lambda e: self.set_shift(False))
         self.temp_text = []
         self.particles = []
+        
+        self.fuel_label = self.canvas.create_text(
+            10, 15, text=f"Fuel: ", fill="#ffffff", font=("Arial", 16), anchor="nw")
+        self.fuel_progress = self.canvas.create_rectangle(
+            70, 15, 70 + self.fuel, 40, fill="#19c809", outline="")
+        self.fuel_border = self.canvas.create_rectangle(
+            70, 15, 70 + 200, 40, outline="#434343", width=2) # max is 200
+
 
         self.spawnrates = {
             "stardust": 0.03,
@@ -312,13 +320,13 @@ class GregGame:
         if key in self.keys:
             self.keys[key] = False
 
-    def show_game_over(self):
+    def show_game_over(self, reason="You've been hit by an asteroid!"):
         self.game_state = "game over"
 
         self.canvas_frame.forget()
         self.home_frame.forget()
         self.game_over_frame.pack(expand=True, fill="both")
-
+        self.game_over_label.config(text=f"Mission Failed! {reason}")
         self.final_score_label1.config(
             text=f"Final Score: {self.stardust} stardust x {round(time.time()-self.start_time, 2)} sec")
         self.final_score_label1.pack()
@@ -461,11 +469,14 @@ class GregGame:
                             self.temp_text.append([label, 30, "#FFFF00"])
 
                         elif (item.type == "fuel"):
-                            fuel_change = random.randint(15, 30)
+                            fuel_change = random.randint(15, 40)
                             self.fuel += fuel_change
                             label = self.canvas.create_text(
                                 self.frog_x+(self.sizes["fuel"]/2), self.frog_y+(self.sizes["fuel"]/2), text=f"+{fuel_change}", fill="#19c809", font=("Arial", 16, "bold"))
                             self.temp_text.append([label, 30, "#19c809"])
+                            
+                            if (self.fuel > 200):
+                                self.fuel = 200
 
                     else:
                         item.time_left -= 1
@@ -506,8 +517,20 @@ class GregGame:
                 if (self.temp_text[i][1] < 0):
                     self.canvas.delete(self.temp_text[i][0])
                     self.temp_text.pop(i)
+            
+            if (self.fuel < 0):
+                # end game here
+                self.show_game_over(reason="You've run out of fuel!")
+            print(self.fuel)
+            self.canvas.coords(self.fuel_progress, 70, 15, 70 + self.fuel, 40)
+            
+            self.canvas.tag_raise(self.fuel_label)
+            self.canvas.tag_raise(self.fuel_progress)
+            self.canvas.tag_raise(self.fuel_border)
 
         self.root.after(self.frame_delay, self.game_loop)
+
+
 
     def show_home(self):
         self.game_state = "home"
@@ -543,6 +566,7 @@ class GregGame:
             "asteroid": 0.01,
             "fuel": 0.005
         }
+        self.fuel = 100
 
         # testing -> apply acceleration
         # self.apply_acceleration(45)
@@ -551,11 +575,13 @@ class GregGame:
         acceleration = 2
         self.is_accelerating = 4
         self.a_type = "normal"
+        self.fuel -=1
 
         if (self.shiftdown):
             acceleration = 4
             self.is_accelerating = 8
             self.a_type = "boost"
+            self.fuel -= 2
 
         self.angle = angle
         self.frog_vx += acceleration * math.cos(math.radians(angle)) * -1
