@@ -9,7 +9,7 @@ root = tk.Tk()
 root.title("Greg the Frog Game")
 
 
-PORT = "COM3"
+PORT = "COM7"
 SERIAL_RATE = 9600
 
 JYSTCK_LOWER = 450
@@ -27,6 +27,8 @@ def change_opacity(image_path, opacity=1.0, size=30):
     img_with_opacity = Image.merge("RGBA", (r, g, b, alpha))
     return ImageTk.PhotoImage(img_with_opacity)
 
+def send_data(info: str):
+    ser.write(info)
 
 def get_data():
     # Set: x-val, y-val, hearth rate
