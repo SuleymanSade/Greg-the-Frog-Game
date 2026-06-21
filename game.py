@@ -6,7 +6,7 @@ import random
 import time
 import serial
 root = tk.Tk()
-root.title("Greg the Frog Game")
+root.title("Space Greg")
 
 
 PORT = "COM7"
@@ -263,30 +263,48 @@ class GregGame:
         self.canvas_frame.pack()
 
         self.home_frame = tk.Frame(root, bg="black")
+        self.header_image = Image.open("ship.png").resize(
+            (100, 100), Image.Resampling.LANCZOS)
+        self.header_image = ImageTk.PhotoImage(self.header_image)
         self.home_label = tk.Label(
-            self.home_frame, text="Welcome to Greg the Frog Game!", font=("Arial", 24), bg="black", fg="white")
+            self.home_frame, text="Space Greg", font=("Arial", 50, "bold"), bg="black", fg="white")
+        self.header_label = tk.Label(self.home_frame, image=self.header_image, bg="black")
         self.start_button = tk.Button(
-            self.home_frame, text="Start Game", command=self.start_game, bg="black", fg="white")
+            self.home_frame, text="Start Game", command=self.start_game, bg="black", fg="white", height=2, width=17, font=("Arial", 16))
+        self.guide_button = tk.Button(
+            self.home_frame, text="Guide", bg="black", fg="white", height=2, width=17, font=("Arial", 16))
         self.home_label.pack()
         self.home_label.place(relx=0.5, rely=.4, anchor=tk.CENTER)
+        self.header_label.pack()
+        self.header_label.place(relx=0.5, rely=.27, anchor=tk.CENTER)
         self.start_button.pack()
-        self.start_button.place(relx=.5, rely=.5, anchor=tk.CENTER)
+        self.start_button.place(relx=.5, rely=.52, anchor=tk.CENTER)
+        self.guide_button.pack()
+        self.guide_button.place(relx=.5, rely=.63, anchor=tk.CENTER)
         self.home_frame.pack()
 
         self.game_over_frame = tk.Frame(root, bg="black")
         self.game_over_label = tk.Label(
-            self.game_over_frame, text="Mission Failed! You've been hit by an asteroid", font=("Arial", 24), bg="black", fg="white")
+            self.game_over_frame, text="Mission Failed!", font=("Arial", 35, "bold"), bg="black", fg="white")
+        self.game_over_label2 = tk.Label(
+            self.game_over_frame, text="You've been hit by an asteroid", font=("Arial", 20), bg="black", fg="white")
         self.final_score_label1 = tk.Label(
-            self.game_over_frame, font=("Arial", 24), bg="black", fg="white")
+            self.game_over_frame, font=("Arial", 20), bg="black", fg="white")
         self.final_score_label2 = tk.Label(
             self.game_over_frame, font=("Arial", 45, "bold"), bg="black", fg="white")
         self.restart_button = tk.Button(self.game_over_frame, text="Restart the Game",
-                                        command=self.start_game, width=20, height=2, font=("Arial", 24), bg="black", fg="white")
+                                        command=self.start_game, width=17, height=2, font=("Arial", 14), bg="black", fg="white")
+        self.return_home = tk.Button(self.game_over_frame, text="Return Home",
+                                        command=self.show_home, width=17, height=2, font=("Arial", 14), bg="black", fg="white")
         self.game_over_label.pack()
         self.game_over_label.place(relx=.5, rely=.4, anchor=tk.CENTER)
+        self.game_over_label2.pack()
+        self.game_over_label2.place(relx=.5, rely=.47, anchor=tk.CENTER)
         self.game_over_frame.pack()
         self.restart_button.pack()
-        self.restart_button.place(relx=.5, rely=.3, anchor=tk.CENTER)
+        self.restart_button.place(relx=.35, rely=.3, anchor=tk.CENTER)
+        self.return_home.pack()
+        self.return_home.place(relx=.65, rely=.3, anchor=tk.CENTER)
 
         self.thruster_shape = [(-20, 10), (-20, -10), (-45, 0)]
         self.thruster_shape2 = [(-10, 15), (-10, -15), (-45, 0)]  # bigger
@@ -376,15 +394,18 @@ class GregGame:
         self.canvas_frame.forget()
         self.home_frame.forget()
         self.game_over_frame.pack(expand=True, fill="both")
-        self.game_over_label.config(text=f"Mission Failed! {reason}")
+        
+        self.game_over_label.config(text="Mission Failed!")
+        self.game_over_label2.config(text=reason)
+        
         self.final_score_label1.config(
             text=f"Final Score: {self.stardust} stardust x {round(time.time()-self.start_time, 2)} sec + {self.fuel} fuel")
         self.final_score_label1.pack()
-        self.final_score_label1.place(relx=.5, rely=.5, anchor=tk.CENTER)
+        self.final_score_label1.place(relx=.5, rely=.55, anchor=tk.CENTER)
         self.final_score_label2.config(
             text=f"= {final_score} pts")
         self.final_score_label2.pack()
-        self.final_score_label2.place(relx=.5, rely=.6, anchor=tk.CENTER)
+        self.final_score_label2.place(relx=.5, rely=.63, anchor=tk.CENTER)
         # self.final_score_label.pack(side="top")
 
         for item in self.objects:
@@ -551,9 +572,9 @@ class GregGame:
                             self.temp_text.append([label, 30, "#FFFF00"])
 
                         elif (item.type == "comet"):
-                            self.stardust += 1
+                            self.stardust += 2
                             label = self.canvas.create_text(
-                                self.frog_x+(item.size/2), self.frog_y+(item.size/2), text="+1", fill="white", font=("Arial", 16, "bold"))
+                                self.frog_x+(item.size/2), self.frog_y+(item.size/2), text="+2", fill="white", font=("Arial", 16, "bold"))
                             self.temp_text.append([label, 30, "#FFFFFF"])
 
                         elif (item.type == "fuel"):
