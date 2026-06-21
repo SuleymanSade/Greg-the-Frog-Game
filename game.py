@@ -9,7 +9,7 @@ root = tk.Tk()
 root.title("Space Greg")
 
 
-PORT = "COM7"
+PORT = "COM3"
 SERIAL_RATE = 9600
 
 JYSTCK_LOWER = 450
@@ -17,7 +17,7 @@ JYSTCK_HIGHER = 550
 
 allHistory = []
 
-# ser = serial.Serial(PORT, baudrate=SERIAL_RATE, timeout=1)
+ser = serial.Serial(PORT, baudrate=SERIAL_RATE, timeout=0.01)
 
 
 def change_opacity(image_path, opacity=1.0, size=30):
@@ -210,6 +210,46 @@ class StaticObject:
         dist = math.sqrt((self.x - frog_x)**2 + (self.y - frog_y)**2)
         return dist < self.size + 25
 
+class Wormholes:
+    def __init__(self, canvas):
+        self.canvas = canvas
+        self.image = Image.open("wormhole.png").resize((60, 60), Image.Resampling.LANCZOS)
+        self.image = ImageTk.PhotoImage(self.image)
+        self.size = 30  
+
+        self.x1 = random.randint(100, 700)
+        self.y1 = random.randint(100, 700)
+        
+        self.x2 = random.randint(100, 700)
+        self.y2 = random.randint(100, 700)
+        
+        while math.sqrt((self.x1 - self.x2)**2 + (self.y1 - self.y2)**2) < 200: # makes sure that they are at least 200 aprt
+            self.x2 = random.randint(100, 700)
+            self.y2 = random.randint(100, 700)
+
+        self.id1 = self.canvas.create_image(self.x1, self.y1, image=self.image)
+        self.id2 = self.canvas.create_image(self.x2, self.y2, image=self.image)
+        self.time_left = 300
+    
+    def update(self):
+        self.time_left -= 1
+        if (self.time_left <= 0):
+            return False
+        return True
+    
+    def destroy(self):
+        self.canvas.delete(self.id1)
+        self.canvas.delete(self.id2)
+    
+    def check_collision(self, frog_x, frog_y):
+        dist1 = math.sqrt((self.x1 - frog_x)**2 + (self.y1 - frog_y)**2)
+        if (dist1 < 35):
+            return 1 # portal 1
+        dist2 = math.sqrt((self.x2 - frog_x)**2 + (self.y2 - frog_y)**2)
+        if (dist2 < 35):
+            return 2 # portal 2
+        return 0 # no collision
+
 class Comet(Asteroid):
     def __init__(self, canvas, game_instance):
         super().__init__(canvas, 20, m_type="normal")
@@ -256,7 +296,8 @@ class GregGame:
             self.canvas_frame, width=800, height=800, bg="black")
         self.canvas.pack()
         self.canvas_frame.pack()
-
+        self.background_image = change_opacity("background.png", 0.2, 800)
+        self.canvas.create_image(0, 0, image=self.background_image, anchor="nw")
         self.home_frame = tk.Frame(root, bg="black")
         self.header_image = Image.open("ship.png").resize(
             (100, 100), Image.Resampling.LANCZOS)
@@ -267,7 +308,9 @@ class GregGame:
         self.start_button = tk.Button(
             self.home_frame, text="Start Game", command=self.start_game, bg="black", fg="white", height=2, width=17, font=("Arial", 16))
         self.guide_button = tk.Button(
-            self.home_frame, text="Guide", bg="black", fg="white", height=2, width=17, font=("Arial", 16))
+            self.home_frame, text="Guide", command=self.show_guide, bg="black", fg="white", height=2, width=17, font=("Arial", 16))
+        
+        
         self.home_label.pack()
         self.home_label.place(relx=0.5, rely=.4, anchor=tk.CENTER)
         self.header_label.pack()
@@ -277,6 +320,7 @@ class GregGame:
         self.guide_button.pack()
         self.guide_button.place(relx=.5, rely=.63, anchor=tk.CENTER)
         self.home_frame.pack()
+        
 
         self.game_over_frame = tk.Frame(root, bg="black")
         self.game_over_label = tk.Label(
@@ -300,9 +344,59 @@ class GregGame:
         self.restart_button.place(relx=.35, rely=.3, anchor=tk.CENTER)
         self.return_home.pack()
         self.return_home.place(relx=.65, rely=.3, anchor=tk.CENTER)
+        
+        self.guide_frame = tk.Frame(root, bg="black")
+        self.guide_header = tk.Label(self.guide_frame, text="Space Greg - Game Guide", font=("Arial", 30, "bold"), bg="black", fg="white")
+        self.guide_header.pack()
+        self.guide_header.place(relx=.5, rely=.1, anchor=tk.CENTER)
+        self.guide_descrpition = tk.Label(self.guide_frame, text="Welcome to Space Greg! You're playing as Greg, a brave frog who is collecting stardust to save the solar system and the rest of the frog species! But this mission is not without its challenges; there are multiple obstacles you'll have to face, all while managing your fuel. ", font=("Arial", 16), bg="black", fg="white", wraplength=700, justify="center")
+        self.guide_descrpition.pack()
+        self.guide_descrpition.place(relx=.5, rely=.2, anchor=tk.CENTER)
+        
+        self.guide_controls = tk.Label(self.guide_frame, text="Controls: \n- Joystick to move Greg (using flicking in direction of intended motion)\n- Shift key to boost speed (uses more fuel)", font=("Arial", 16), bg="black", fg="white", justify="left")
+        self.guide_controls.pack()
+        self.guide_controls.place(relx=.5, rely=.32, anchor=tk.CENTER) 
 
         self.thruster_shape = [(-20, 10), (-20, -10), (-45, 0)]
         self.thruster_shape2 = [(-10, 15), (-10, -15), (-45, 0)]  # bigger
+        self.fuel_frames = {} # hold different sizes too
+        print("Preloading and caching assets...")
+        self.base_fuel_img = Image.open("fuel.png").convert("RGBA")
+        
+        for s in range(7, 22):
+            self.fuel_frames[s] = []
+            sized_img = self.base_fuel_img.resize((s * 2, s * 2), Image.Resampling.LANCZOS)
+            
+            for i in range(101):
+                opacity = i / 100.0
+                r, g, b, alpha = sized_img.split()
+                alpha = alpha.point(lambda p: int(p * opacity))
+                final_img = Image.merge("RGBA", (r, g, b, alpha))
+                self.fuel_frames[s].append(ImageTk.PhotoImage(final_img))
+            
+        self.wormhole_frames = []
+        base_wormhole = Image.open("wormhole.png").resize((60, 60), Image.Resampling.LANCZOS).convert("RGBA")
+        for i in range(301): 
+            rotated_img = base_wormhole.rotate(i * 10)
+            r, g, b, alpha = rotated_img.split()
+            opacity = max(0.0, min(i / 200.0, 1.0))
+            alpha = alpha.point(lambda p: int(p * opacity))
+            final_img = Image.merge("RGBA", (r, g, b, alpha))
+            self.wormhole_frames.append(ImageTk.PhotoImage(final_img))
+        
+        
+        # self.stardust_frames = []
+        self.stardust_frames = {}  #multiple sizes
+        base_stardust = Image.open("stardust.png").convert("RGBA")
+        for s in range(7, 32):
+            self.stardust_frames[s] = []
+            sized_img = base_stardust.resize((s * 2, s * 2), Image.Resampling.LANCZOS)
+            for i in range(101):
+                opacity = i / 100.0
+                r, g, b, alpha = sized_img.split()
+                alpha = alpha.point(lambda p: int(p * opacity))
+                final_img = Image.merge("RGBA", (r, g, b, alpha))
+                self.stardust_frames[s].append(ImageTk.PhotoImage(final_img))
 
         self.last_sent_fuel = -1
 
@@ -390,6 +484,7 @@ class GregGame:
             self.stardust * (time.time()-self.start_time)) + self.fuel
         self.canvas_frame.forget()
         self.home_frame.forget()
+        self.guide_frame.forget()
         self.game_over_frame.pack(expand=True, fill="both")
         
         self.game_over_label.config(text="Mission Failed!")
@@ -429,6 +524,7 @@ class GregGame:
             self.canvas.itemconfigure(self.border, width=self.margin)
             self.spawnrates["asteroid"] += 0.00002
             self.spawnrates["stardust"] += 0.00001
+            self.spawnrates["fuel"] += 0.000005
             self.canvas.move(self.frog, 0.5, 0.5)
 
             if (self.keys["Up"]):
@@ -452,8 +548,6 @@ class GregGame:
                 if len(allHistory) > 5:
                     allHistory.pop(0)
             deg = detect_flick()
-            if deg is not None:
-                print(deg)
             if deg is not None:
                 self.apply_acceleration(deg)
             else:
@@ -512,11 +606,18 @@ class GregGame:
                     elif probs == "comet":
                         self.objects.append(Comet(self.canvas, self))
                     elif probs == "stardust":
-                        self.objects.append(StaticObject(self.canvas, random.randint(
-                            200, 600), random.randint(200, 600), int(self.sizes["stardust"]), "stardust"))
+                        spawn_size = int(self.sizes["stardust"])
+                        clamped_size = max(7, min(31, spawn_size))
+                        starting_image = self.stardust_frames[clamped_size][100]                        
+                        stardust = StaticObject(self.canvas, random.randint(
+                            200, 600), random.randint(200, 600), spawn_size, "stardust", starting_image)
+                        self.objects.append(stardust)
                     elif probs == "fuel":
+                        spawn_size = int(self.sizes["fuel"])
+                        clamped_size = max(7, min(21, spawn_size))
+                        starting_image = self.fuel_frames[clamped_size][100]
                         fuel = StaticObject(self.canvas, random.randint(
-                            200, 600), random.randint(200, 600), int(self.sizes["fuel"]), "fuel", self.fuel_image)
+                            200, 600), random.randint(200, 600), spawn_size, "fuel", starting_image)
                         self.objects.append(fuel)
                         print("fuel spawned at ", fuel.x, fuel.y)
                     elif probs == "asteroid-cluster":
@@ -543,6 +644,12 @@ class GregGame:
                             self.canvas.coords(asteroid.id, asteroid.get_rotated_points())
                             
                             self.objects.append(asteroid)
+                    elif probs == "wormhole":
+                        # too many wormholes = bad
+                        if not any(isinstance(obj, Wormholes) for obj in self.objects):
+                            wormhole = Wormholes(self.canvas)
+                            self.objects.append(wormhole)
+                        
             to_delete = []
             for item in self.objects:
                 still_moving = item.update()
@@ -557,9 +664,16 @@ class GregGame:
                             self.canvas.itemconfigure(item.id, fill=self.grayscale(
                                 (255, 255, 0), (100 - (item.time_left / 100) * 100)))
                     else:
-                        item.image = change_opacity(
-                            "fuel.png", item.time_left / 100, item.size * 2)
-                        self.canvas.itemconfigure(item.id, image=item.image)
+                        if (item.type == "fuel"):
+                            frame_index = max(0, min(100, int(item.time_left)))
+                            clamped_size = max(7, min(21, int(item.size)))
+                            item.image = self.fuel_frames[clamped_size][frame_index]
+                            self.canvas.itemconfigure(item.id, image=item.image)
+                        elif (item.type == "stardust"):
+                            frame_index = max(0, min(100, int(item.time_left)))
+                            clamped_size = max(7, min(31, int(item.size)))
+                            item.image = self.stardust_frames[clamped_size][frame_index]
+                            self.canvas.itemconfigure(item.id, image=item.image)
                     if item.check_collision(self.frog_x, self.frog_y):
                         to_delete.append(item)
                         if (item.type == "stardust"):
@@ -608,10 +722,30 @@ class GregGame:
                         self.game_state = "exploding"
                         self.explode()
                         # self.show_home()
+                elif isinstance(item, Wormholes):
+                    frame_index = max(0, min(300, int(item.time_left)))
+                    
+                    item.image = self.wormhole_frames[frame_index]
+                    self.canvas.itemconfigure(item.id1, image=item.image)
+                    self.canvas.itemconfigure(item.id2, image=item.image)
+                    
+                    if item.check_collision(self.frog_x, self.frog_y) == 1:
+                        print("Entered wormhole! Teleporting...")
+                        self.frog_x = item.x2
+                        self.frog_y = item.y2
+                        self.canvas.coords(self.frog, self.frog_x, self.frog_y)
+                        to_delete.append(item)
+                    elif item.check_collision(self.frog_x, self.frog_y) == 2:
+                        print("Entered wormhole! Teleporting...")
+                        self.frog_x = item.x1
+                        self.frog_y = item.y1
+                        self.canvas.coords(self.frog, self.frog_x, self.frog_y)
+                        to_delete.append(item)
+                    
 
             for item in to_delete:
                 item.destroy()
-                if isinstance(item, StaticObject) and item in self.objects:
+                if (isinstance(item, StaticObject) or isinstance(item, Wormholes)) and item in self.objects:
                     self.objects.remove(item)
 
             self.canvas.tag_raise(self.border)
@@ -623,18 +757,30 @@ class GregGame:
                 if (self.temp_text[i][1] < 0):
                     self.canvas.delete(self.temp_text[i][0])
                     self.temp_text.pop(i)
+            time_elapsed = int(time.time() - self.start_time)
 
             if (self.fuel < 0):
+                self.fuel = 0
                 # end game here
                 self.show_game_over(reason="You've run out of fuel!")
-            print(self.fuel)
+            if (self.fuel > 90):
+                self.canvas.itemconfigure(self.fuel_progress, fill="#19c809")
+            elif (self.fuel > 60):
+                self.canvas.itemconfigure(self.fuel_progress, fill="#c8c809")
+            elif (self.fuel > 30):
+                self.canvas.itemconfigure(self.fuel_progress, fill="#c86f09")
+            else:
+                if ((time_elapsed*2) % 2 == 0):
+                    self.canvas.itemconfigure(self.fuel_progress, fill="#b22121")
+                else:
+                    self.canvas.itemconfigure(self.fuel_progress, fill="#C64141")
+            time_elapsed = int(time_elapsed)
             self.canvas.coords(self.fuel_progress, 70, 15, 70 + self.fuel, 40)
 
             self.canvas.tag_raise(self.fuel_label)
             self.canvas.tag_raise(self.fuel_progress)
             self.canvas.tag_raise(self.fuel_border)
 
-            time_elapsed = int(time.time() - self.start_time)
             minutes = time_elapsed // 60
             seconds = time_elapsed % 60
             self.canvas.itemconfigure(
@@ -657,12 +803,21 @@ class GregGame:
         self.home_frame.pack(expand=True, fill="both")
         self.canvas_frame.pack_forget()
         self.game_over_frame.pack_forget()
+        self.guide_frame.pack_forget()
+    
+    def show_guide(self):
+        self.game_state = "guide"
+        self.home_frame.pack_forget()
+        self.canvas_frame.pack_forget()
+        self.game_over_frame.pack_forget()
+        self.guide_frame.pack(expand=True, fill="both")
 
     def show_game(self):
         self.game_state = "game"
         self.home_frame.pack_forget()
         self.canvas_frame.pack(expand=True, fill="both")
         self.game_over_frame.pack_forget()
+        self.guide_frame.pack_forget()
 
         # set up game preset data and stuff
         self.objects = []
@@ -687,7 +842,8 @@ class GregGame:
             "asteroid": 0.01,
             "fuel": 0.005,
             "asteroid-cluster": 0.002,
-            "comet": 0.001
+            "comet": 0.001,
+            "wormhole": 0.004
         }
         self.fuel = 100
 
