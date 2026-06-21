@@ -98,8 +98,13 @@ void loop() {
         String info = Serial.readStringUntil('\n');
         info.trim();
 
+        int comma_loc = info.indexOf(',');
+
+        String fuel_amount = info.substring(0, comma_loc);
+        String gameOver = info.substring(comma_loc+1);
+
         if (info.length() > 0) {
-            int fuelVal = info.toInt();
+            int fuelVal = fuel_amount.toInt();
             int barWidth = map(fuelVal, 0, 200, 0, 100); 
             barWidth = constrain(barWidth, 0, 100);
 
@@ -110,6 +115,21 @@ void loop() {
                 display.fillRect(112-barWidth, 7, barWidth, 50, SSD1306_WHITE);
             }
             display.display();
+        }
+
+        if(gameOver == "1"){
+            for(int i=0; i<5; ++i){
+                digitalWrite(8, LOW);
+                digitalWrite(12, HIGH);
+                delay(50);
+                digitalWrite(8, HIGH);
+                digitalWrite(12, LOW);
+                delay(50);
+                for (int freq = 1000; freq >= 800; freq -= 50) {
+                    tone (buzzer_pin, freq, 10);
+                    delay(10);
+                }
+            }
         }
     }
 }

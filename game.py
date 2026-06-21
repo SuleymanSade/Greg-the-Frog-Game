@@ -546,6 +546,8 @@ class GregGame:
         for item in self.objects:
             item.destroy()
 
+        send_data("0,1\n")
+
         self.objects = []
         self.stardust = 0
 
@@ -833,7 +835,7 @@ class GregGame:
         if self.game_state == "game":
             if int(self.fuel) != self.last_sent_fuel: 
                 try:
-                    fuel_string = str(int(self.fuel)) + "\n"
+                    fuel_string = str(int(self.fuel)) +  ", 0\n"
                     send_data(fuel_string)
                     self.last_sent_fuel = int(self.fuel)
                 except Exception as e:
