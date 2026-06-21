@@ -2,12 +2,13 @@ import tkinter as tk
 import math
 import random
 
+import time
 import serial
 root = tk.Tk()
 root.title("Greg the Frog Game")
 
 
-PORT = "COM3"
+PORT = "COM7"
 SERIAL_RATE = 9600
 
 JYSTCK_LOWER = 450
@@ -185,7 +186,10 @@ class StaticObject:
 
 class GregGame:
     def __init__(self, root):
+        self.start_time = time.time()
+        
         self.root = root
+
         root.geometry("800x800")
 
         self.game_state = "home"
@@ -201,19 +205,25 @@ class GregGame:
         self.start_button = tk.Button(
             self.home_frame, text="Start Game", command=self.start_game)
         self.home_label.pack()
+        self.home_label.place(relx=0.5, rely=.4, anchor=tk.CENTER)
         self.start_button.pack()
+        self.start_button.place(relx=.5, rely=.5, anchor=tk.CENTER)
         self.home_frame.pack()
 
         self.game_over_frame = tk.Frame(root)
-        self.game_over_label = tk.Label(
-            self.game_over_frame, text="Game over, you have been hit by an astroid", font=("Arial", 24))
-        self.final_score_label = tk.Label(self.game_over_frame)
-        self.restart_button = tk.Button(
-            self.game_over_frame, text="Restart the Game", command=self.start_game)
-        self.game_over_label.pack(side="bottom", pady=600, fill="x")
+        self.game_over_label = tk.Label(self.game_over_frame, text= "Game over, you have been hit by an astroid", font= ("Arial", 24))
+        self.final_score_label1 = tk.Label(self.game_over_frame, font=("Arial", 24))
+        self.final_score_label2 = tk.Label(self.game_over_frame, font=("Arial", 45))
+        self.restart_button = tk.Button(self.game_over_frame, text="Restart the Game", command=self.start_game, width=20, height=2, font=("Arial", 24))
+        self.game_over_label.pack()
+        self.game_over_label.place(relx=.5, rely=.4, anchor=tk.CENTER)
         self.game_over_frame.pack()
-        self.restart_button.pack(side="bottom", pady=400)
+        self.restart_button.pack()
+        self.restart_button.place(relx=.5, rely=.3, anchor=tk.CENTER)
+        
 
+        
+        
         self.thruster_shape = [(-20, 10), (-20, -10), (-45, 0)]
         self.thruster_shape2 = [(-10, 15), (-10, -15), (-45, 0)]  # bigger
 
@@ -281,16 +291,23 @@ class GregGame:
 
         self.canvas_frame.forget()
         self.home_frame.forget()
-        self.game_over_frame.pack(expand=True, fill="both")
-
-        self.final_score_label.config(text=f"Final Score: {self.stardust}")
-        self.final_score_label.pack(side="bottom")
+        self.game_over_frame.pack(expand=True, fill= "both")
+        
+        self.final_score_label1.config(text=f"Final Score: {self.stardust} stardust x {round(time.time()-self.start_time, 2)} sec")
+        self.final_score_label1.pack()
+        self.final_score_label1.place(relx=.5, rely=.5, anchor=tk.CENTER)
+        self.final_score_label2.config(text=f"= {round(self.stardust * (time.time()-self.start_time), 2)} pts")
+        self.final_score_label2.pack()
+        self.final_score_label2.place(relx=.5, rely=.6, anchor=tk.CENTER)
+        # self.final_score_label.pack(side="top")
 
         for item in self.objects:
             item.destroy()
 
         self.objects = []
         self.stardust = 0
+
+        self.start_time = time.time()
 
     def game_loop(self):
 
