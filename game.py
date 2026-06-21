@@ -17,7 +17,7 @@ JYSTCK_HIGHER = 550
 
 allHistory = []
 
-# ser = serial.Serial(PORT, baudrate=SERIAL_RATE, timeout=1)
+ser = serial.Serial(PORT, baudrate=SERIAL_RATE, timeout=1)
 
 
 def change_opacity(image_path, opacity=1.0, size=30):
@@ -527,6 +527,11 @@ class GregGame:
             self.canvas.tag_raise(self.fuel_label)
             self.canvas.tag_raise(self.fuel_progress)
             self.canvas.tag_raise(self.fuel_border)
+
+        try:
+            send_data(self.fuel + "\n")
+        except:
+            pass
 
         self.root.after(self.frame_delay, self.game_loop)
 
