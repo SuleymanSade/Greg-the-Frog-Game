@@ -320,6 +320,7 @@ class GregGame:
         self.guide_button.pack()
         self.guide_button.place(relx=.5, rely=.63, anchor=tk.CENTER)
         self.home_frame.pack()
+        self.high_score = 0
         
 
         self.game_over_frame = tk.Frame(root, bg="black")
@@ -327,6 +328,13 @@ class GregGame:
             self.game_over_frame, text="Mission Failed!", font=("Arial", 35, "bold"), bg="black", fg="white")
         self.game_over_label2 = tk.Label(
             self.game_over_frame, text="You've been hit by an asteroid", font=("Arial", 20), bg="black", fg="white")
+        self.high_score_label = tk.Label(self.game_over_frame, text=f"High Score: {self.high_score}", font=("Arial", 20), bg="black", fg="white")
+        self.high_score_label.pack()
+        self.high_score_label.place(relx=.5, rely=.73, anchor=tk.CENTER)
+        self.new_high_score = tk.Label(self.game_over_frame, text="New High Score!", font=("Arial", 25), bg="black", fg="#50ba6c")
+        self.new_high_score.pack()
+        self.new_high_score.place(relx=.5, rely=.78, anchor=tk.CENTER)
+
         self.final_score_label1 = tk.Label(
             self.game_over_frame, font=("Arial", 20), bg="black", fg="white")
         self.final_score_label2 = tk.Label(
@@ -360,7 +368,7 @@ class GregGame:
         self.guide_return.pack()
         self.guide_return.place(relx=.5, rely=.93, anchor=tk.CENTER)
         # description of each object
-        texts = ["This is Greg, in his spaceship. Use the joystick to move him around.", "Stardust is what you need to collect to win the game. The more you have, the better your score!", "Fuel is required to move around. Collect fuel objects to replenish your fuel, fuel runs out quickly!", "Asteroids are obstacles you must avoid. You'll explode if you collide with them!", "Be especially careful of asteroid clusters. They are fast moving groups of asteroids that are hard to navigate through!", "Comets are dangerously fast objects that leave a trail of valuable stardust, but be careful as they can be hard to avoid!", "Wormholes are mysterious portals that can transport you to their pair, but be cautious where you go!"] 
+        texts = ["This is Greg, in his spaceship. Use the joystick to move him around.", "Stardust is what you need to collect to win the game. These get smaller as the game progresses, making them harder to collect!", "Collect fuel objects to replenish your fuel, it runs out quickly! These get smaller as the game progresses, making them harder to collect!", "Asteroids are obstacles you must avoid. You'll explode if you collide with them!", "Be especially careful of asteroid clusters. They are fast moving groups of asteroids that are hard to navigate through!", "Comets are dangerously fast objects that leave a trail of valuable stardust, but be careful as they can be hard to avoid!", "Wormholes are mysterious portals that can transport you to their pair, but be cautious where you go!"] 
         for img in ["ship.png", "stardust.png", "fuel.png", "asteroid.png", "cluster.png","comet.png", "wormhole.png"]:
             loaded_img = Image.open(img).resize((50, 50), Image.Resampling.LANCZOS)
             tk_img = ImageTk.PhotoImage(loaded_img)
@@ -522,6 +530,17 @@ class GregGame:
             text=f"= {final_score} pts")
         self.final_score_label2.pack()
         self.final_score_label2.place(relx=.5, rely=.63, anchor=tk.CENTER)
+        self.high_score_label.config(text=f"High Score: {self.high_score}")
+        if final_score > self.high_score:
+            self.high_score_label.config(text=f"Previous High Score: {self.high_score}")
+
+            self.high_score = final_score
+            self.new_high_score.config(text="New High Score!")
+            self.new_high_score.pack()
+            self.new_high_score.place(relx=.5, rely=.78, anchor=tk.CENTER)
+        else:
+            self.new_high_score.pack_forget()
+            self.new_high_score.place_forget()
         # self.final_score_label.pack(side="top")
 
         for item in self.objects:
@@ -713,7 +732,7 @@ class GregGame:
                             self.temp_text.append([label, 30, "#FFFFFF"])
 
                         elif (item.type == "fuel"):
-                            fuel_change = random.randint(15, 40)
+                            fuel_change = random.randint(25, 50)
                             self.fuel += fuel_change
                             label = self.canvas.create_text(
                                 self.frog_x+(self.sizes["fuel"]/2), self.frog_y+(self.sizes["fuel"]/2), text=f"+{fuel_change}", fill="#19c809", font=("Arial", 16, "bold"))
