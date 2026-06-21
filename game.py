@@ -284,6 +284,8 @@ class GregGame:
             70, 15, 70 + self.fuel, 40, fill="#19c809", outline="")
         self.fuel_border = self.canvas.create_rectangle(
             70, 15, 70 + 200, 40, outline="#434343", width=2) # max is 200
+        self.time_label = self.canvas.create_text(
+            750, 15, text=f"0s", fill="#ffffff", font=("Arial", 16), anchor="ne")
 
 
         self.spawnrates = {
@@ -323,16 +325,17 @@ class GregGame:
     def show_game_over(self, reason="You've been hit by an asteroid!"):
         self.game_state = "game over"
 
+        final_score = round(self.stardust * (time.time()-self.start_time)) + self.fuel
         self.canvas_frame.forget()
         self.home_frame.forget()
         self.game_over_frame.pack(expand=True, fill="both")
         self.game_over_label.config(text=f"Mission Failed! {reason}")
         self.final_score_label1.config(
-            text=f"Final Score: {self.stardust} stardust x {round(time.time()-self.start_time, 2)} sec")
+            text=f"Final Score: {self.stardust} stardust x {round(time.time()-self.start_time, 2)} sec + {self.fuel} fuel")
         self.final_score_label1.pack()
         self.final_score_label1.place(relx=.5, rely=.5, anchor=tk.CENTER)
         self.final_score_label2.config(
-            text=f"= {round(self.stardust * (time.time()-self.start_time))} pts")
+            text=f"= {final_score} pts")
         self.final_score_label2.pack()
         self.final_score_label2.place(relx=.5, rely=.6, anchor=tk.CENTER)
         # self.final_score_label.pack(side="top")
@@ -350,9 +353,12 @@ class GregGame:
         if (self.game_state == "game"):
             self.margin += 0.06
             self.sizes["stardust"] -= 0.009  # goes down by 0.540 every second
-            self.sizes["asteroid"] += 0.004  # goes up by 0.06 every second
-            if (self.sizes["stardust"] < 1):
-                self.sizes["stardust"] = 1
+            self.sizes["asteroid"] += 0.004  # goes up by 0.24 every second
+            self.sizes["fuel"] -= 0.006  # goes down by 0.36 every second
+            if (self.sizes["fuel"] < 3):
+                self.sizes["fuel"] = 3
+            if (self.sizes["stardust"] < 3):
+                self.sizes["stardust"] = 3
             if (self.sizes["asteroid"] > 50):
                 self.sizes["asteroid"] = 50
             self.canvas.itemconfigure(self.border, width=self.margin)
@@ -527,6 +533,12 @@ class GregGame:
             self.canvas.tag_raise(self.fuel_label)
             self.canvas.tag_raise(self.fuel_progress)
             self.canvas.tag_raise(self.fuel_border)
+            
+            time_elapsed = int(time.time() - self.start_time)
+            minutes = time_elapsed // 60
+            seconds = time_elapsed % 60
+            self.canvas.itemconfigure(self.time_label, text=f"{minutes}m {seconds}s")
+            self.canvas.tag_raise(self.time_label)
 
         try:
             send_data(self.fuel + "\n")
