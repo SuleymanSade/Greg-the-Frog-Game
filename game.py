@@ -6,7 +6,7 @@ import random
 import time
 import serial
 root = tk.Tk()
-root.title("Greg the Frog Game")
+root.title("Space Greg")
 
 
 PORT = "COM7"
@@ -17,7 +17,7 @@ JYSTCK_HIGHER = 550
 
 allHistory = []
 
-ser = serial.Serial(PORT, baudrate=SERIAL_RATE, timeout=1)
+# ser = serial.Serial(PORT, baudrate=SERIAL_RATE, timeout=1)
 
 
 def change_opacity(image_path, opacity=1.0, size=30):
@@ -27,8 +27,10 @@ def change_opacity(image_path, opacity=1.0, size=30):
     img_with_opacity = Image.merge("RGBA", (r, g, b, alpha))
     return ImageTk.PhotoImage(img_with_opacity)
 
+
 def send_data(info: str):
     ser.write(info.encode("utf-8"))
+
 
 def get_data():
     # Set: x-val, y-val, hearth rate
@@ -105,7 +107,7 @@ def detect_flick():
 
 
 class Asteroid:
-    def __init__(self, canvas, size):
+    def __init__(self, canvas, size, m_type="normal"):
         self.canvas = canvas
         self.radius = random.randint(size-5, size+5)
         self.angle = 0
@@ -139,8 +141,15 @@ class Asteroid:
             angle = i * (2 * math.pi / num_points) + random.uniform(-0.2, 0.2)
             dist = self.radius * random.uniform(0.7, 1.3)
             self.shape.append((dist * math.cos(angle), dist * math.sin(angle)))
-        self.id = self.canvas.create_polygon(
-            self.get_rotated_points(), fill="gray", outline="white")
+        if (m_type == "mega"):
+            self.spin_speed *= 2
+            self.id = self.canvas.create_polygon(
+                self.get_rotated_points(), fill="#1a0f0b", outline="white")
+            self.vx *= 2
+            self.vy *= 2
+        else:
+            self.id = self.canvas.create_polygon(
+                self.get_rotated_points(), fill="#353535", outline="white")
 
     def get_rotated_points(self):
         points = []
@@ -156,7 +165,7 @@ class Asteroid:
         self.angle += self.spin_speed
         self.canvas.coords(self.id, self.get_rotated_points())
 
-        if (self.x < -50 or self.x > 850 or self.y < -50 or self.y > 850):
+        if (self.x < -150 or self.x > 950 or self.y < -150 or self.y > 950):
             return False
         return True
 
@@ -183,7 +192,11 @@ class StaticObject:
             self.id = self.canvas.create_image(
                 self.x, self.y, image=self.image)
         else:
-            self.id = self.canvas.create_oval(
+            if (self.type == "comet"):
+                self.id = self.canvas.create_oval(
+                    self.x-self.size, self.y-self.size, self.x+self.size, self.y+self.size, fill="white")
+            else:
+                self.id = self.canvas.create_oval(
                 self.x-self.size, self.y-self.size, self.x+self.size, self.y+self.size, fill="yellow")
         self.time_left = 100  # 5 seconds at 60 fps
 
@@ -197,6 +210,37 @@ class StaticObject:
         dist = math.sqrt((self.x - frog_x)**2 + (self.y - frog_y)**2)
         return dist < self.size + 25
 
+class Comet(Asteroid):
+    def __init__(self, canvas, game_instance):
+        super().__init__(canvas, 20, m_type="normal")
+        self.size = 20
+        self.game = game_instance 
+        self.canvas.itemconfigure(self.id, fill="white", outline="#eeeeee")
+        self.vx *= 3.0
+        self.vy *= 3.0
+        self.spin_speed = random.uniform(-0.02, 0.02)
+        
+        self.trail_timer = 0
+
+    def update(self):
+        still_moving = super().update()
+        if still_moving:
+            self.trail_timer += 1
+            if self.trail_timer >= 3:
+                self.trail_timer = 0
+                if random.random() < 0.6:
+                    stardust = StaticObject(
+                        self.canvas, 
+                        self.x + random.uniform(-10, 10), 
+                        self.y + random.uniform(-10, 10), 
+                        10, 
+                        "comet"
+                    )
+                    stardust.time_left = 90  
+                    self.game.objects.append(stardust)
+                    
+        return still_moving
+    
 
 class GregGame:
     def __init__(self, root):
@@ -214,30 +258,48 @@ class GregGame:
         self.canvas_frame.pack()
 
         self.home_frame = tk.Frame(root, bg="black")
+        self.header_image = Image.open("ship.png").resize(
+            (100, 100), Image.Resampling.LANCZOS)
+        self.header_image = ImageTk.PhotoImage(self.header_image)
         self.home_label = tk.Label(
-            self.home_frame, text="Welcome to Greg the Frog Game!", font=("Arial", 24), bg="black", fg="white")
+            self.home_frame, text="Space Greg", font=("Arial", 50, "bold"), bg="black", fg="white")
+        self.header_label = tk.Label(self.home_frame, image=self.header_image, bg="black")
         self.start_button = tk.Button(
-            self.home_frame, text="Start Game", command=self.start_game, bg="black", fg="white")
+            self.home_frame, text="Start Game", command=self.start_game, bg="black", fg="white", height=2, width=17, font=("Arial", 16))
+        self.guide_button = tk.Button(
+            self.home_frame, text="Guide", bg="black", fg="white", height=2, width=17, font=("Arial", 16))
         self.home_label.pack()
         self.home_label.place(relx=0.5, rely=.4, anchor=tk.CENTER)
+        self.header_label.pack()
+        self.header_label.place(relx=0.5, rely=.27, anchor=tk.CENTER)
         self.start_button.pack()
-        self.start_button.place(relx=.5, rely=.5, anchor=tk.CENTER)
+        self.start_button.place(relx=.5, rely=.52, anchor=tk.CENTER)
+        self.guide_button.pack()
+        self.guide_button.place(relx=.5, rely=.63, anchor=tk.CENTER)
         self.home_frame.pack()
 
         self.game_over_frame = tk.Frame(root, bg="black")
         self.game_over_label = tk.Label(
-            self.game_over_frame, text="Mission Failed! You've been hit by an asteroid", font=("Arial", 24), bg="black", fg="white")
+            self.game_over_frame, text="Mission Failed!", font=("Arial", 35, "bold"), bg="black", fg="white")
+        self.game_over_label2 = tk.Label(
+            self.game_over_frame, text="You've been hit by an asteroid", font=("Arial", 20), bg="black", fg="white")
         self.final_score_label1 = tk.Label(
-            self.game_over_frame, font=("Arial", 24), bg="black", fg="white")
+            self.game_over_frame, font=("Arial", 20), bg="black", fg="white")
         self.final_score_label2 = tk.Label(
             self.game_over_frame, font=("Arial", 45, "bold"), bg="black", fg="white")
         self.restart_button = tk.Button(self.game_over_frame, text="Restart the Game",
-                                        command=self.start_game, width=20, height=2, font=("Arial", 24), bg="black", fg="white")
+                                        command=self.start_game, width=17, height=2, font=("Arial", 14), bg="black", fg="white")
+        self.return_home = tk.Button(self.game_over_frame, text="Return Home",
+                                        command=self.show_home, width=17, height=2, font=("Arial", 14), bg="black", fg="white")
         self.game_over_label.pack()
         self.game_over_label.place(relx=.5, rely=.4, anchor=tk.CENTER)
+        self.game_over_label2.pack()
+        self.game_over_label2.place(relx=.5, rely=.47, anchor=tk.CENTER)
         self.game_over_frame.pack()
         self.restart_button.pack()
-        self.restart_button.place(relx=.5, rely=.3, anchor=tk.CENTER)
+        self.restart_button.place(relx=.35, rely=.3, anchor=tk.CENTER)
+        self.return_home.pack()
+        self.return_home.place(relx=.65, rely=.3, anchor=tk.CENTER)
 
         self.thruster_shape = [(-20, 10), (-20, -10), (-45, 0)]
         self.thruster_shape2 = [(-10, 15), (-10, -15), (-45, 0)]  # bigger
@@ -264,7 +326,8 @@ class GregGame:
         self.sizes = {
             "stardust": 30,
             "asteroid": 20,
-            "fuel": 15
+            "fuel": 15,
+            "asteroid-cluster": 40
         }
         self.fuel = 40
         self.shiftdown = False
@@ -274,21 +337,22 @@ class GregGame:
         self.root.bind("<KeyRelease-Shift_R>", lambda e: self.set_shift(False))
         self.temp_text = []
         self.particles = []
-        
+
         self.fuel_label = self.canvas.create_text(
             10, 15, text=f"Fuel: ", fill="#ffffff", font=("Arial", 16), anchor="nw")
         self.fuel_progress = self.canvas.create_rectangle(
             70, 15, 70 + self.fuel, 40, fill="#19c809", outline="")
         self.fuel_border = self.canvas.create_rectangle(
-            70, 15, 70 + 200, 40, outline="#434343", width=2) # max is 200
+            70, 15, 70 + 200, 40, outline="#434343", width=2)  # max is 200
         self.time_label = self.canvas.create_text(
             750, 15, text=f"0s", fill="#ffffff", font=("Arial", 16), anchor="ne")
-
 
         self.spawnrates = {
             "stardust": 0.03,
             "asteroid": 0.01,
-            "fuel": 0.005
+            "fuel": 0.005,
+            "asteroid-cluster": 0.0005,
+            "comet": 0.0003
         }
 
         self.frame_delay = int(1000 / 60)  # 60 fps
@@ -322,19 +386,23 @@ class GregGame:
     def show_game_over(self, reason="You've been hit by an asteroid!"):
         self.game_state = "game over"
 
-        final_score = round(self.stardust * (time.time()-self.start_time)) + self.fuel
+        final_score = round(
+            self.stardust * (time.time()-self.start_time)) + self.fuel
         self.canvas_frame.forget()
         self.home_frame.forget()
         self.game_over_frame.pack(expand=True, fill="both")
-        self.game_over_label.config(text=f"Mission Failed! {reason}")
+        
+        self.game_over_label.config(text="Mission Failed!")
+        self.game_over_label2.config(text=reason)
+        
         self.final_score_label1.config(
             text=f"Final Score: {self.stardust} stardust x {round(time.time()-self.start_time, 2)} sec + {self.fuel} fuel")
         self.final_score_label1.pack()
-        self.final_score_label1.place(relx=.5, rely=.5, anchor=tk.CENTER)
+        self.final_score_label1.place(relx=.5, rely=.55, anchor=tk.CENTER)
         self.final_score_label2.config(
             text=f"= {final_score} pts")
         self.final_score_label2.pack()
-        self.final_score_label2.place(relx=.5, rely=.6, anchor=tk.CENTER)
+        self.final_score_label2.place(relx=.5, rely=.63, anchor=tk.CENTER)
         # self.final_score_label.pack(side="top")
 
         for item in self.objects:
@@ -352,10 +420,10 @@ class GregGame:
             self.sizes["stardust"] -= 0.009  # goes down by 0.540 every second
             self.sizes["asteroid"] += 0.004  # goes up by 0.24 every second
             self.sizes["fuel"] -= 0.006  # goes down by 0.36 every second
-            if (self.sizes["fuel"] < 3):
-                self.sizes["fuel"] = 3
-            if (self.sizes["stardust"] < 3):
-                self.sizes["stardust"] = 3
+            if (self.sizes["fuel"] < 7):
+                self.sizes["fuel"] = 7
+            if (self.sizes["stardust"] < 7):
+                self.sizes["stardust"] = 7
             if (self.sizes["asteroid"] > 50):
                 self.sizes["asteroid"] = 50
             self.canvas.itemconfigure(self.border, width=self.margin)
@@ -441,6 +509,8 @@ class GregGame:
                     if probs == "asteroid":
                         self.objects.append(
                             Asteroid(self.canvas, int(self.sizes["asteroid"])))
+                    elif probs == "comet":
+                        self.objects.append(Comet(self.canvas, self))
                     elif probs == "stardust":
                         self.objects.append(StaticObject(self.canvas, random.randint(
                             200, 600), random.randint(200, 600), int(self.sizes["stardust"]), "stardust"))
@@ -449,7 +519,30 @@ class GregGame:
                             200, 600), random.randint(200, 600), int(self.sizes["fuel"]), "fuel", self.fuel_image)
                         self.objects.append(fuel)
                         print("fuel spawned at ", fuel.x, fuel.y)
+                    elif probs == "asteroid-cluster":
+                        main_size = int(self.sizes["asteroid-cluster"])
+                        main = Asteroid(self.canvas, main_size, m_type="mega")
+                        self.objects.append(main)
 
+                        num_debris = random.randint(3, 6)
+
+                        for _ in range(num_debris):
+                            debris_size = int(self.sizes["asteroid"] * random.uniform(0.4, 1.2))
+                            asteroid = Asteroid(self.canvas, debris_size, m_type="mega")
+                            angle = random.uniform(0, 2 * math.pi)
+                            distance = random.uniform(main_size * 0.8, main_size * 2.2)
+                            
+                            asteroid.x = main.x + math.cos(angle) * distance
+                            asteroid.y = main.y + math.sin(angle) * distance
+                            asteroid.vx = main.vx + random.uniform(-0.4, 0.4)
+                            asteroid.vy = main.vy + random.uniform(-0.4, 0.4)
+                            
+                            # asteroid.spin_speed = main.spin_speed + random.uniform(-0.05, 0.05)
+                            asteroid.spin_speed = random.uniform(-0.15, 0.15)
+
+                            self.canvas.coords(asteroid.id, asteroid.get_rotated_points())
+                            
+                            self.objects.append(asteroid)
             to_delete = []
             for item in self.objects:
                 still_moving = item.update()
@@ -457,19 +550,29 @@ class GregGame:
                     to_delete.append(item)
                 if isinstance(item, StaticObject):
                     if (item.image is None):
-                        self.canvas.itemconfigure(item.id, fill=self.grayscale(
-                            (255, 255, 0), (100 - (item.time_left / 100) * 100)))
+                        if item.type == "comet":
+                            self.canvas.itemconfigure(item.id, fill=self.grayscale(
+                                (255, 255, 255), (100 - (item.time_left / 100) * 100)))
+                        else:
+                            self.canvas.itemconfigure(item.id, fill=self.grayscale(
+                                (255, 255, 0), (100 - (item.time_left / 100) * 100)))
                     else:
                         item.image = change_opacity(
                             "fuel.png", item.time_left / 100, item.size * 2)
                         self.canvas.itemconfigure(item.id, image=item.image)
                     if item.check_collision(self.frog_x, self.frog_y):
-                        self.stardust += 1
                         to_delete.append(item)
                         if (item.type == "stardust"):
+                            self.stardust += 1
                             label = self.canvas.create_text(
                                 self.frog_x+(self.sizes["stardust"]/2), self.frog_y+(self.sizes["stardust"]/2), text="+1", fill="yellow", font=("Arial", 16, "bold"))
                             self.temp_text.append([label, 30, "#FFFF00"])
+
+                        elif (item.type == "comet"):
+                            self.stardust += 2
+                            label = self.canvas.create_text(
+                                self.frog_x+(item.size/2), self.frog_y+(item.size/2), text="+2", fill="white", font=("Arial", 16, "bold"))
+                            self.temp_text.append([label, 30, "#FFFFFF"])
 
                         elif (item.type == "fuel"):
                             fuel_change = random.randint(15, 40)
@@ -477,7 +580,7 @@ class GregGame:
                             label = self.canvas.create_text(
                                 self.frog_x+(self.sizes["fuel"]/2), self.frog_y+(self.sizes["fuel"]/2), text=f"+{fuel_change}", fill="#19c809", font=("Arial", 16, "bold"))
                             self.temp_text.append([label, 30, "#19c809"])
-                            
+
                             if (self.fuel > 200):
                                 self.fuel = 200
 
@@ -520,21 +623,22 @@ class GregGame:
                 if (self.temp_text[i][1] < 0):
                     self.canvas.delete(self.temp_text[i][0])
                     self.temp_text.pop(i)
-            
+
             if (self.fuel < 0):
                 # end game here
                 self.show_game_over(reason="You've run out of fuel!")
             print(self.fuel)
             self.canvas.coords(self.fuel_progress, 70, 15, 70 + self.fuel, 40)
-            
+
             self.canvas.tag_raise(self.fuel_label)
             self.canvas.tag_raise(self.fuel_progress)
             self.canvas.tag_raise(self.fuel_border)
-            
+
             time_elapsed = int(time.time() - self.start_time)
             minutes = time_elapsed // 60
             seconds = time_elapsed % 60
-            self.canvas.itemconfigure(self.time_label, text=f"{minutes}m {seconds}s")
+            self.canvas.itemconfigure(
+                self.time_label, text=f"{minutes}m {seconds}s")
             self.canvas.tag_raise(self.time_label)
 
         if self.game_state == "game":
@@ -547,8 +651,6 @@ class GregGame:
                         print(f"Serial write error: {e}")
 
         self.root.after(self.frame_delay, self.game_loop)
-
-
 
     def show_home(self):
         self.game_state = "home"
@@ -569,7 +671,8 @@ class GregGame:
         self.sizes = {
             "stardust": 30,
             "asteroid": 20,
-            "fuel": 20
+            "fuel": 20,
+            "asteroid-cluster": 40
         }
         self.particles = []
         self.frog_x = 400
@@ -582,7 +685,9 @@ class GregGame:
         self.spawnrates = {
             "stardust": 0.03,
             "asteroid": 0.01,
-            "fuel": 0.005
+            "fuel": 0.005,
+            "asteroid-cluster": 0.002,
+            "comet": 0.001
         }
         self.fuel = 100
 
@@ -593,7 +698,7 @@ class GregGame:
         acceleration = 2
         self.is_accelerating = 4
         self.a_type = "normal"
-        self.fuel -=1
+        self.fuel -= 1
 
         if (self.shiftdown):
             acceleration = 4
