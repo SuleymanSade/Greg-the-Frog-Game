@@ -59,7 +59,7 @@ void setup() {
 }
 
 void loop() {
-    // 1. Read joysticks FIRST so controls stay highly responsive
+    // First joysrick for responsiveness
     xval = analogRead(vrX);
     yval = analogRead(vrY);
     Serial.print(xval);
@@ -71,6 +71,7 @@ void loop() {
     allX[1] = xval;
     allY[1] = yval;
 
+    // Detect flick
     bool xExt = false, yExt = false;
     if(allX[0] > 575 || allX[0] < 450){
         if(allX[1] < 575 && allX[1] > 450){
@@ -83,6 +84,7 @@ void loop() {
         }
     }
 
+    // Light LED if detect flick
     if(xExt || yExt){
         tone (buzzer_pin, 800, 50);
         digitalWrite(8, HIGH);
@@ -93,7 +95,7 @@ void loop() {
     digitalWrite(8, LOW);
     digitalWrite(12, HIGH);
 
-    // 2. Process serial data only when a full line arrives
+    // Info from python code
     if(Serial.available() > 0){
         String info = Serial.readStringUntil('\n');
         info.trim();
@@ -103,6 +105,7 @@ void loop() {
         String fuel_amount = info.substring(0, comma_loc);
         String gameOver = info.substring(comma_loc+1);
 
+        // The fuel OLED
         if (info.length() > 0) {
             int fuelVal = fuel_amount.toInt();
             int barWidth = map(fuelVal, 0, 200, 0, 100); 
@@ -117,6 +120,7 @@ void loop() {
             display.display();
         }
 
+        // Light and sound when game over
         if(gameOver == "1"){
             for(int i=0; i<5; ++i){
                 digitalWrite(8, LOW);

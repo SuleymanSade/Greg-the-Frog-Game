@@ -14,6 +14,8 @@ Welcome to Space Greg! You're playing as Greg, a brave frog who is collecting st
 - **Astroid groups** spawn much rarer than singular astroids but cover a larger area and travel together with varying sizes. Behaves very similar to astroids and a collision ends the game.
 - **Wormholes** spawn at random locations in pairs and a collision with one of them teleports Greg to the other wormhole and both wormholes disappear. Can be used in risky situations as a quick escape.
 
+## AI Use
+- AI is used to search up infromation about certain libraries and specific syntax, as well as refinments and revisions of the code.
 
 ## Tech Stack
 ### Software
