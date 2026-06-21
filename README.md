@@ -1,6 +1,6 @@
 # Game
 ## Background
-You are a space frog named Greg who is lost in the space and your goal is to collect as many stardust as you ca and try to survive while navigating through astroids and commets.
+Welcome to Space Greg! You're playing as Greg, a brave frog who is collecting stardust to save the solar system and the rest of the frog species! But this mission is not without its challenges; there are multiple obstacles you'll have to face, all while managing your fuel.
 
 ## Gameplay
 ### Controls

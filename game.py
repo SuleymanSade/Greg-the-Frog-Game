@@ -546,7 +546,6 @@ class GregGame:
         for item in self.objects:
             item.destroy()
 
-        send_data("0,1\n")
 
         self.objects = []
         self.stardust = 0
@@ -765,6 +764,8 @@ class GregGame:
                             self.particles.append(
                                 {"id": particle, "vx": vx, "vy": vy, "life": 80, "delay": random.randint(0, 3), "color": color})
                         self.game_state = "exploding"
+                        send_data("0,1\n")
+
                         self.explode()
                         # self.show_home()
                 elif isinstance(item, Wormholes):
